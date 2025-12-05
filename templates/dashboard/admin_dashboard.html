@@ -110,8 +110,8 @@
                 <i class="bx bx-briefcase stat-icon"></i>
                 <div class="stat-info">
                     <h6>Purchases</h6>
-                    <h3>1000.00</h3>
-                    <small>New Purchase</small>
+                    <h3>{{ total_purchases|floatformat:2 }}</h3>
+                    <small><a href="{% url 'products:add_product' %}" class="text-white text-decoration-none">New Purchase</a></small>
                 </div>
             </div>
         </div>
@@ -121,8 +121,8 @@
                 <i class="bx bx-bar-chart-alt-2 stat-icon"></i>
                 <div class="stat-info">
                     <h6>Sales</h6>
-                    <h3>300.00</h3>
-                    <small>New Sale</small>
+                    <h3>{{ total_sales|floatformat:2 }}</h3>
+                    <small><a href="{% url 'sales:new_sale' %}" class="text-white text-decoration-none">New Sale</a></small>
                 </div>
             </div>
         </div>
@@ -132,7 +132,7 @@
                 <i class="bx bx-line-chart stat-icon"></i>
                 <div class="stat-info">
                     <h6>Profit</h6>
-                    <h3>100.00</h3>
+                    <h3>{{ total_profit|floatformat:2 }}</h3>
                     <small>&nbsp;</small>
                 </div>
             </div>
@@ -143,8 +143,8 @@
                 <i class="bx bx-cart stat-icon"></i>
                 <div class="stat-info">
                     <h6>Sale Purchases</h6>
-                    <h3>2</h3>
-                    <small>New Sale</small>
+                    <h3>{{ sales_count }}</h3>
+                    <small><a href="{% url 'sales:new_sale' %}" class="text-white text-decoration-none">New Sale</a></small>
                 </div>
             </div>
         </div>
@@ -156,8 +156,8 @@
                 <i class="bx bx-money stat-icon"></i>
                 <div class="stat-info">
                     <h6>Debts</h6>
-                    <h3>1</h3>
-                    <small>Unpaid Debts</small>
+                    <h3>{{ unpaid_debts_count }}</h3>
+                    <small><a href="{% url 'payments:debt_list' %}" class="text-white text-decoration-none">Unpaid Debts</a></small>
                 </div>
             </div>
         </div>
@@ -167,8 +167,8 @@
                 <i class="bx bx-shopping-bag stat-icon"></i>
                 <div class="stat-info">
                     <h6>Products</h6>
-                    <h3>1</h3>
-                    <small>New Product</small>
+                    <h3>{{ products_count }}</h3>
+                    <small><a href="{% url 'products:add_product' %}" class="text-white text-decoration-none">New Product</a></small>
                 </div>
             </div>
         </div>
