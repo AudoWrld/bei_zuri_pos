@@ -5,6 +5,7 @@ from django.db.models import Sum
 from sales.models import Sale, Return
 from products.models import Product
 from payments.models import Debt
+from users.models import User
 
 
 @login_required(login_url="login_view")
@@ -35,6 +36,8 @@ def admin_dashboard(request):
     returns_count = Return.objects.count()
     unpaid_debts_count = Debt.objects.filter(status="unpaid").count()
     products_count = Product.objects.count()
+    delivery_guys_count = User.objects.filter(role=User.DELIVERY_GUY).count()
+    customers_count = User.objects.filter(role=User.CUSTOMER).count()
 
     context = {
         "user": request.user,
@@ -44,6 +47,8 @@ def admin_dashboard(request):
         "returns_count": returns_count,
         "unpaid_debts_count": unpaid_debts_count,
         "products_count": products_count,
+        "delivery_guys_count": delivery_guys_count,
+        "customers_count": customers_count,
     }
     return render(request, "dashboard/admin_dashboard.html", context)
 
