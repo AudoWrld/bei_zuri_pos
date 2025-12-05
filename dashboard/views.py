@@ -1,6 +1,10 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db.models import Sum
+from sales.models import Sale, Return
+from products.models import Product
+from payments.models import Debt
 
 
 @login_required(login_url="login_view")
@@ -25,8 +29,21 @@ def admin_dashboard(request):
         messages.error(request, "Access denied")
         return redirect("dashboard")
 
+    total_sales = Sale.objects.aggregate(total=Sum('final_amount'))['total'] or 0
+    sales_count = Sale.objects.count()
+    total_profit = total_sales
+    returns_count = Return.objects.count()
+    unpaid_debts_count = Debt.objects.filter(status="unpaid").count()
+    products_count = Product.objects.count()
+
     context = {
         "user": request.user,
+        "total_sales": total_sales,
+        "sales_count": sales_count,
+        "total_profit": total_profit,
+        "returns_count": returns_count,
+        "unpaid_debts_count": unpaid_debts_count,
+        "products_count": products_count,
     }
     return render(request, "dashboard/admin_dashboard.html", context)
 

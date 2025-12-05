@@ -107,11 +107,11 @@
     <div class="dashboard-row">
         <div class="dashboard-col">
             <div class="stat-card bg-green">
-                <i class="bx bx-briefcase stat-icon"></i>
+                <i class="bx bx-refresh stat-icon"></i>
                 <div class="stat-info">
-                    <h6>Purchases</h6>
-                    <h3>{{ total_purchases|floatformat:2 }}</h3>
-                    <small><a href="{% url 'products:add_product' %}" class="text-white text-decoration-none">New Purchase</a></small>
+                    <h6>Returns</h6>
+                    <h3>{{ returns_count }}</h3>
+                    <small><a href="{% url 'sales:return_start' %}" class="text-white text-decoration-none">Start Return</a></small>
                 </div>
             </div>
         </div>
@@ -179,7 +179,7 @@
                 <div class="stat-info">
                     <h6>Delivery Guys</h6>
                     <h3>1</h3>
-                    <small>New Delivery Guy</small>
+                    <small><a href="{% url 'settings:create_user' %}" class="text-white text-decoration-none">New Delivery Guy</a></small>
                 </div>
             </div>
         </div>
@@ -190,7 +190,7 @@
                 <div class="stat-info">
                     <h6>Customers</h6>
                     <h3>1</h3>
-                    <small>New Customer</small>
+                    <small>Total Customers</small>
                 </div>
             </div>
         </div>
