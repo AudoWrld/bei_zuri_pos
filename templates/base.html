@@ -106,7 +106,7 @@
             </a>
           </li>
           <li data-tooltip="Return">
-            <a href="">
+            <a href="{% url 'sales:return_start' %}" {% if request.resolver_match.url_name == 'return_start' and request.resolver_match.app_name == 'sales' %}class="active"{% endif %}>
               <i class='bx bx-recycle icon'></i>
               <span>Return</span>
             </a>
