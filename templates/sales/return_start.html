@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}Start Return - BeiZuri Shop{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/products/add_product.css' %}?v={{ STATIC_VERSION }}">
+<link rel="stylesheet" href="{% static 'css/sales/new_sale.css' %}?v={{ STATIC_VERSION}}">
+
+<div class="page-header">
+  <div class="header-content">
+    <div>
+      <h1>Process Return</h1>
+      <p class="product-sku">Enter the sale number to start return process</p>
+    </div>
+  </div>
+</div>
+
+<div class="product-detail">
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="form-section">
+      <div class="section-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2Z" stroke="#00bcd4" stroke-width="1.5"/>
+          <path d="M10 6V10L13 11.5" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M7 14H10" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <h3>Sale Information</h3>
+      </div>
+      <div class="form-content">
+        <div class="form-group">
+          <label for="{{ form.sale_number.id_for_label }}">Sale Number</label>
+          {{ form.sale_number }}
+          {% if form.sale_number.errors %}
+            <div class="error-message">
+              {% for error in form.sale_number.errors %}
+                <span>{{ error }}</span>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">
+        <i class="bx bx-search"></i> Find Sale
+      </button>
+      <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+        <i class="bx bx-arrow-back"></i> Back to Dashboard
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

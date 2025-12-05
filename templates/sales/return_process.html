@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+{% block title %}Process Return - BeiZuri Shop{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/sales/process_sale.css' %}?v={{ STATIC_VERSION }}">
+
+<div class="sale-container" data-return-items="{% if return_items_json %}{{ return_items_json|safe }}{% else %}[]{% endif %}">
+  <div class="left-panel">
+    <div class="product-search-section" style="padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px;">
+      <h4 style="margin-bottom: 15px; color: #333;">Scan Product or Search by SKU</h4>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <input type="text" id="productSearch" placeholder="Scan barcode or enter SKU..." style="flex: 1; padding: 10px; border: 2px solid #e0e0e0; border-radius: 4px; font-size: 16px;" autofocus>
+        <button type="button" id="searchBtn" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          <i class='bx bx-search'></i> Search
+        </button>
+      </div>
+      <div id="searchResults" style="margin-top: 10px; max-height: 200px; overflow-y: auto;"></div>
+    </div>
+
+    <div class="sale-items-wrapper">
+      <form method="post" id="returnForm">
+        {% csrf_token %}
+        <table class="sale-items-table">
+          <thead>
+            <tr>
+              <th>Product name</th>
+              <th style="text-align: center;">Sold Qty</th>
+              <th style="text-align: center;">Return Qty</th>
+              <th style="text-align: center;">Reason</th>
+              <th style="text-align: right;">Unit Price</th>
+              <th style="text-align: right;">Total</th>
+              <th style="text-align: center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="returnItemsTable">
+            {% for return_item in return_items %}
+            <tr data-sale-item-id="{{ return_item.sale_item_id }}">
+              <td class="item-name">{{ return_item.product_name }}</td>
+              <td style="text-align: center;">{{ return_item.sold_quantity }}</td>
+              <td style="text-align: center;">
+                <input type="number" name="quantity_{{ return_item.sale_item_id }}" value="{{ return_item.quantity }}" min="1" max="{{ return_item.sold_quantity }}" class="qty-input" style="width: 80px; text-align: center;">
+              </td>
+              <td style="text-align: center;">
+                <select name="reason_{{ return_item.sale_item_id }}" class="form-control" style="width: 100px; padding: 8px 10px; text-align: center; border: 2px solid #e0e0e0; border-radius: 4px; font-weight: 600; color: #00bcd4; font-size: 15px;">
+                  <option value="FAULTY" {% if return_item.return_reason == 'FAULTY' %}selected{% endif %}>Faulty</option>
+                  <option value="PROSPECT" {% if return_item.return_reason == 'PROSPECT' %}selected{% endif %}>Prospect</option>
+                </select>
+              </td>
+              <td style="text-align: right;">{{ return_item.unit_price }}</td>
+              <td style="text-align: right;" class="return-total">{{ return_item.total_price }}</td>
+              <td style="text-align: center;">
+                <button type="button" class="remove-item-btn" data-sale-item-id="{{ return_item.sale_item_id }}" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                  <i class='bx bx-trash'></i>
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <div class="control-panel">
+          <div class="action-buttons">
+            <button type="submit" class="btn-action btn-save" {% if not return_items %}disabled{% endif %}>
+              <i class='bx bx-check'></i>
+              Process Return
+            </button>
+            <a href="{% url 'sales:return_start' %}" class="btn-action btn-new-sale" style="text-decoration: none;">
+              <i class='bx bx-arrow-back'></i>
+              Back
+            </a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="sale-info">
+      <div class="sale-header">
+        <h2>Return Details</h2>
+        <div class="sale-number">{{ sale.sale_number }} - {{ sale.get_sale_type_display }}</div>
+      </div>
+
+      <div class="sale-summary">
+        <div class="summary-row">
+          <span class="summary-label">Items Selected</span>
+          <span class="summary-value" id="itemsSelected">{{ return_items|length }}</span>
+        </div>
+        <div class="summary-row total">
+          <span class="summary-label">Return Total</span>
+          <span class="summary-value" id="returnTotal">{{ total_return_amount|default:'0.00' }}</span>
+        </div>
+      </div>
+
+      <div class="sale-footer" style="padding: 15px; background: #f8f9fa; border-top: 1px solid #e0e0e0; font-size: 12px; color: #6c757d;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Cashier: {{ user.get_full_name }}</span>
+          <span>Time: <span id="currentTime"></span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('productSearch');
+  const searchBtn = document.getElementById('searchBtn');
+  const searchResults = document.getElementById('searchResults');
+  const returnItemsTable = document.getElementById('returnItemsTable');
+  const itemsSelectedEl = document.getElementById('itemsSelected');
+  const returnTotalEl = document.getElementById('returnTotal');
+  const returnForm = document.getElementById('returnForm');
+
+  let returnItems = JSON.parse(document.querySelector('.sale-container').dataset.returnItems);
+
+  function updateTotals() {
+    let totalItems = returnItems.length;
+    let totalAmount = 0;
+
+    returnItems.forEach(item => {
+      totalAmount += parseFloat(item.total_price);
+    });
+
+    itemsSelectedEl.textContent = totalItems;
+    returnTotalEl.textContent = totalAmount.toFixed(2);
+
+    const processBtn = returnForm.querySelector('.btn-save');
+    processBtn.disabled = totalItems === 0;
+  }
+
+  function renderReturnItems() {
+    returnItemsTable.innerHTML = '';
+    returnItems.forEach(item => {
+      const row = document.createElement('tr');
+      row.setAttribute('data-sale-item-id', item.sale_item_id);
+      row.innerHTML = `
+        <td class="item-name">${item.product_name}</td>
+        <td style="text-align: center;">${item.sold_quantity}</td>
+        <td style="text-align: center;">
+          <input type="number" name="quantity_${item.sale_item_id}" value="${item.quantity}" min="1" max="${item.sold_quantity}" class="qty-input" style="width: 80px; text-align: center;">
+        </td>
+        <td style="text-align: center;">
+          <select name="reason_${item.sale_item_id}" class="form-control" style="width: 100px; padding: 8px 10px; text-align: center; border: 2px solid #e0e0e0; border-radius: 4px; font-weight: 600; color: #00bcd4; font-size: 15px;">
+            <option value="FAULTY" ${item.return_reason === 'FAULTY' ? 'selected' : ''}>Faulty</option>
+            <option value="PROSPECT" ${item.return_reason === 'PROSPECT' ? 'selected' : ''}>Prospect</option>
+          </select>
+        </td>
+        <td style="text-align: right;">${item.unit_price}</td>
+        <td style="text-align: right;" class="return-total">${item.total_price}</td>
+        <td style="text-align: center;">
+          <button type="button" class="remove-item-btn" data-sale-item-id="${item.sale_item_id}" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+            <i class='bx bx-trash'></i>
+          </button>
+        </td>
+      `;
+      returnItemsTable.appendChild(row);
+    });
+
+    // Add event listeners
+    document.querySelectorAll('.qty-input').forEach(input => {
+      input.addEventListener('input', function() {
+        const saleItemId = this.name.replace('quantity_', '');
+        const item = returnItems.find(i => i.sale_item_id == saleItemId);
+        if (item) {
+          item.quantity = parseInt(this.value) || 0;
+          item.total_price = (item.quantity * parseFloat(item.unit_price)).toFixed(2);
+          this.closest('tr').querySelector('.return-total').textContent = item.total_price;
+          updateTotals();
+        }
+      });
+    });
+
+    document.querySelectorAll('.remove-item-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const saleItemId = this.getAttribute('data-sale-item-id');
+        returnItems = returnItems.filter(item => item.sale_item_id != saleItemId);
+        renderReturnItems();
+        updateTotals();
+      });
+    });
+  }
+
+  function searchProduct(query) {
+    if (!query.trim()) return;
+
+    fetch(`/sales/return/search-product/?sale_id={{ sale.id }}&query=${encodeURIComponent(query)}`)
+      .then(response => response.json())
+      .then(data => {
+        searchResults.innerHTML = '';
+        if (data.success && data.products.length > 0) {
+          data.products.forEach(product => {
+            const div = document.createElement('div');
+            div.style.cssText = 'padding: 10px; border: 1px solid #e0e0e0; margin-bottom: 5px; border-radius: 4px; background: white; cursor: pointer;';
+            div.innerHTML = `
+              <strong>${product.name}</strong><br>
+              <small>Sold: ${product.sold_quantity} | Price: ${product.unit_price}</small>
+            `;
+            div.addEventListener('click', () => addToReturn(product));
+            searchResults.appendChild(div);
+          });
+        } else {
+          searchResults.innerHTML = '<div style="padding: 10px; color: #dc3545;">No products found in this sale</div>';
+        }
+      })
+      .catch(error => {
+        console.error('Search error:', error);
+        searchResults.innerHTML = '<div style="padding: 10px; color: #dc3545;">Search failed</div>';
+      });
+  }
+
+  function addToReturn(product) {
+    if (returnItems.some(item => item.sale_item_id == product.sale_item_id)) {
+      alert('This product is already in the return list');
+      return;
+    }
+
+    returnItems.push({
+      sale_item_id: product.sale_item_id,
+      product_name: product.name,
+      sold_quantity: product.sold_quantity,
+      quantity: 1,
+      return_reason: 'FAULTY',
+      unit_price: product.unit_price,
+      total_price: product.unit_price
+    });
+
+    renderReturnItems();
+    updateTotals();
+    searchInput.value = '';
+    searchResults.innerHTML = '';
+  }
+
+  searchBtn.addEventListener('click', () => searchProduct(searchInput.value));
+  searchInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      searchProduct(this.value);
+    }
+  });
+
+  function updateTime() {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString();
+    document.getElementById('currentTime').textContent = timeString;
+  }
+
+  updateTime();
+  setInterval(updateTime, 1000);
+
+  renderReturnItems();
+  updateTotals();
+});
+</script>
+{% endblock %}

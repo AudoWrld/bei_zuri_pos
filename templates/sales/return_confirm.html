@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block title %}Confirm Return - BeiZuri Shop{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/sales/process_sale.css' %}?v={{ STATIC_VERSION }}">
+
+<div class="sale-container">
+  <div class="left-panel">
+    <div class="sale-items-wrapper">
+      <div class="page-header">
+        <div class="header-content">
+          <div>
+            <h1>Confirm Return</h1>
+            <p class="product-sku">Review return details before processing</p>
+          </div>
+        </div>
+      </div>
+
+      <table class="sale-items-table">
+        <thead>
+          <tr>
+            <th>Product name</th>
+            <th style="text-align: center;">Return Qty</th>
+            <th style="text-align: center;">Reason</th>
+            <th style="text-align: right;">Unit Price</th>
+            <th style="text-align: right;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in return_items %}
+          <tr>
+            <td class="item-name">{{ forloop.counter }}. {{ item.product.name }}</td>
+            <td style="text-align: center;">{{ item.quantity }}</td>
+            <td style="text-align: center;">{{ item.get_return_reason_display }}</td>
+            <td style="text-align: right;">{{ item.unit_price }}</td>
+            <td style="text-align: right;">{{ item.total_price }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <form method="post" style="margin-top: 20px;">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="notes">Notes (Optional)</label>
+          <textarea id="notes" name="notes" rows="3" placeholder="Any additional notes about this return..."></textarea>
+        </div>
+
+        <div class="control-panel">
+          <div class="action-buttons">
+            <button type="submit" class="btn-action btn-save">
+              <i class='bx bx-check'></i>
+              Confirm Return
+            </button>
+            <a href="{% url 'sales:return_start' %}" class="btn-action btn-new-sale">
+              <i class='bx bx-arrow-back'></i>
+              Cancel
+            </a>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="sale-info">
+      <div class="sale-header">
+        <h2>Return Summary</h2>
+        <div class="sale-number">{{ sale.sale_number }} - {{ sale.get_sale_type_display }}</div>
+      </div>
+
+      <div class="sale-summary">
+        <div class="summary-row">
+          <span class="summary-label">Items to Return</span>
+          <span class="summary-value">{{ return_items|length }}</span>
+        </div>
+        <div class="summary-row total">
+          <span class="summary-label">Return Total</span>
+          <span class="summary-value">{{ total_return_amount }}</span>
+        </div>
+      </div>
+
+      <div class="sale-footer" style="padding: 15px; background: #f8f9fa; border-top: 1px solid #e0e0e0; font-size: 12px; color: #6c757d;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Cashier: {{ user.get_full_name }}</span>
+          <span>Time: <span id="currentTime"></span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  function updateTime() {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString();
+    document.getElementById('currentTime').textContent = timeString;
+  }
+
+  updateTime();
+  setInterval(updateTime, 1000);
+});
+</script>
+{% endblock %}
