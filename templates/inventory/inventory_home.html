@@ -61,23 +61,48 @@
 </div>
 
 <div class="profit-section">
-    <h5>Sales Profit Breakdown</h5>
+    <h5>Daily Sales Metrics</h5>
+    <div class="profit-grid">
+        <div class="profit-item retail">
+            <h6>Daily Sales Count</h6>
+            <h4>{{ daily_sales_count }}</h4>
+        </div>
+
+        <div class="profit-item wholesale">
+            <h6>Daily Revenue</h6>
+            <h4>KES {{ daily_sales_revenue|floatformat:2 }}</h4>
+        </div>
+
+        <div class="profit-item special">
+            <h6>Daily Profit</h6>
+            <h4>KES {{ daily_total_profit|floatformat:2 }}</h4>
+        </div>
+
+        <div class="profit-item total">
+            <h6>Today's Date</h6>
+            <h4>{% now "M d, Y" %}</h4>
+        </div>
+    </div>
+</div>
+
+<div class="profit-section">
+    <h5>Overall Sales Profit Breakdown</h5>
     <div class="profit-grid">
         <div class="profit-item retail">
             <h6>Retail Sale Profit</h6>
             <h4>KES {{ retail_profit|floatformat:2 }}</h4>
         </div>
-        
+
         <div class="profit-item wholesale">
             <h6>Wholesale Sale Profit</h6>
             <h4>KES {{ wholesale_profit|floatformat:2 }}</h4>
         </div>
-        
+
         <div class="profit-item special">
             <h6>Special Sale Profit</h6>
             <h4>KES {{ special_profit|floatformat:2 }}</h4>
         </div>
-        
+
         <div class="profit-item total">
             <h6>Total Profit</h6>
             <h4>KES {{ total_profit|floatformat:2 }}</h4>
