@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Manage Users | BeiZuri POS{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/products/product_list.css' %}?v={{ STATIC_VERSION }}">
+
+<div class="page-header">
+  <h1>Manage Users</h1>
+  <div class="header-actions">
+    <a href="{% url 'settings:create_user' %}" class="btn btn-primary">Add New User</a>
+  </div>
+</div>
+
+<div class="search-container">
+  <input type="text" id="userSearch" class="search-input" placeholder="Search users...">
+</div>
+
+<div class="table-container">
+  <table class="data-table" id="userTable">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Full Name</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td><div class="text-truncate">{{ user.username }}</div></td>
+        <td><div class="text-truncate">{{ user.get_full_name|default:"N/A" }}</div></td>
+        <td><div class="text-truncate">{{ user.email|default:"N/A" }}</div></td>
+        <td>
+          <span class="badge badge-role">{{ user.get_role_display }}</span>
+        </td>
+        <td>
+          {% if user.is_active %}
+            <span class="badge badge-active">Active</span>
+          {% else %}
+            <span class="badge badge-inactive">Inactive</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="action-links">
+            <a href="{% url 'settings:update_user' user.id %}" class="action-link">Edit</a> |
+            <a href="{% url 'settings:change_password' user.id %}" class="action-link">Change Password</a>
+            {% if not user == request.user %}
+            | <a href="{% url 'settings:delete_user' user.id %}" class="action-link delete-link">Delete</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if not users %}
+<div class="no-results">
+  <p>No users found.</p>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('userSearch');
+  const table = document.getElementById('userTable');
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+
+  searchInput.addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase().trim();
+
+    rows.forEach(row => {
+      const username = row.cells[0].textContent.toLowerCase();
+      const fullName = row.cells[1].textContent.toLowerCase();
+      const email = row.cells[2].textContent.toLowerCase();
+      const role = row.cells[3].textContent.toLowerCase();
+
+      if (username.includes(searchTerm) ||
+          fullName.includes(searchTerm) ||
+          email.includes(searchTerm) ||
+          role.includes(searchTerm)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  });
+});
+</script>
+
+<style>
+.action-links {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 250px;
+}
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-role { background-color: #3498db; color: white; }
+.badge-active { background-color: #27ae60; color: white; }
+.badge-inactive { background-color: #95a5a6; color: white; }
+
+.action-links {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.action-link {
+    color: #3498db;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.action-link:hover {
+    text-decoration: underline;
+}
+
+.delete-link {
+    color: #e74c3c;
+}
+</style>
+
+{% endblock %}

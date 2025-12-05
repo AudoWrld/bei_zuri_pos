@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block title %}BeiZuri Shop - Debts{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/products/product_list.css' %}?v={{ STATIC_VERSION }}">
+
+<div class="page-header">
+  <h1>Debts</h1>
+  <div class="header-actions">
+    <a href="{% url 'settings:settings_home' %}" class="btn btn-secondary">Back to Settings</a>
+  </div>
+</div>
+
+<div class="search-container">
+  <form method="get" class="search-form">
+    <input type="text" name="search" class="search-input" placeholder="Search debts..." value="{{ search_query }}">
+    <button type="submit" class="search-btn">Search</button>
+  </form>
+</div>
+
+<div class="table-container">
+  <table class="data-table" id="debtTable">
+    <thead>
+      <tr>
+        <th>
+          <a href="?sort={% if current_sort == 'customer_first_name' %}-customer_first_name{% else %}customer_first_name{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Customer Name
+            {% if current_sort == 'customer_first_name' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-customer_first_name' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'customer_email' %}-customer_email{% else %}customer_email{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Email
+            {% if current_sort == 'customer_email' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-customer_email' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'customer_phone' %}-customer_phone{% else %}customer_phone{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Phone
+            {% if current_sort == 'customer_phone' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-customer_phone' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'amount_owed' %}-amount_owed{% else %}amount_owed{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Amount Owed
+            {% if current_sort == 'amount_owed' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-amount_owed' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'amount_paid' %}-amount_paid{% else %}amount_paid{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Amount Paid
+            {% if current_sort == 'amount_paid' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-amount_paid' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'status' %}-status{% else %}status{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Status
+            {% if current_sort == 'status' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-status' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'cashier__username' %}-cashier__username{% else %}cashier__username{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Cashier
+            {% if current_sort == 'cashier__username' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-cashier__username' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'created_at' %}-created_at{% else %}created_at{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Created
+            {% if current_sort == 'created_at' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-created_at' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for debt in page_obj %}
+      <tr>
+        <td><div class="text-truncate">{{ debt.customer_first_name }}{% if debt.customer_second_name %} {{ debt.customer_second_name }}{% endif %}</div></td>
+        <td>{{ debt.customer_email|default:"-" }}</td>
+        <td>{{ debt.customer_phone|default:"-" }}</td>
+        <td>{{ debt.amount_owed }}</td>
+        <td>{{ debt.amount_paid }}</td>
+        <td>
+          <span class="status-badge status-{{ debt.status }}">
+            {{ debt.get_status_display }}
+          </span>
+        </td>
+        <td>{{ debt.cashier.get_full_name|default:debt.cashier.username }}</td>
+        <td>{{ debt.created_at|date:"M d, Y H:i" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td colspan="8">
+          <div class="pagination">
+            {% if page_obj.has_previous %}
+              <a href="?page=1{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevrons-left'></i></a>
+              <a href="?page={{ page_obj.previous_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevron-left'></i></a>
+            {% else %}
+              <span class="disabled"><i class='bx bx-chevrons-left'></i></span>
+              <span class="disabled"><i class='bx bx-chevron-left'></i></span>
+            {% endif %}
+            <span class="current-page">{{ page_obj.number }}</span>
+            {% if page_obj.has_next %}
+              <a href="?page={{ page_obj.next_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevron-right'></i></a>
+              <a href="?page={{ page_obj.paginator.num_pages }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevrons-right'></i></a>
+            {% else %}
+              <span class="disabled"><i class='bx bx-chevron-right'></i></span>
+              <span class="disabled"><i class='bx bx-chevrons-right'></i></span>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+{% if not page_obj %}
+<div class="no-results">
+  <p>No debts found for the selected period.</p>
+</div>
+{% endif %}
+
+<style>
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-unpaid {
+    background: #ffebee;
+    color: #d32f2f;
+}
+
+.status-partial {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.status-cleared {
+    background: #e8f5e8;
+    color: #2e7d32;
+}
+</style>
+
+{% endblock %}

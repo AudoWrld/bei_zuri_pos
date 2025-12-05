@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% block title %}Stock Movements - BeiZuri Shop{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/products/product_list.css' %}?v={{ STATIC_VERSION }}">
+
+<div class="page-header">
+  <h1>Stock Movements</h1>
+  <div class="header-actions">
+    <a href="{% url 'products:product_list' %}" class="btn btn-secondary">Back to Products</a>
+  </div>
+</div>
+
+<div class="search-container">
+  <form method="get" class="search-form">
+    <input type="text" name="search" class="search-input" placeholder="Search movements..." value="{{ search_query }}">
+    <select name="movement_type" class="search-input">
+      <option value="">All Types</option>
+      <option value="IN" {% if movement_type == 'IN' %}selected{% endif %}>Stock In</option>
+      <option value="OUT" {% if movement_type == 'OUT' %}selected{% endif %}>Stock Out</option>
+      <option value="ADJUST" {% if movement_type == 'ADJUST' %}selected{% endif %}>Adjustment</option>
+    </select>
+    <button type="submit" class="search-btn">Search</button>
+  </form>
+</div>
+
+<div class="table-container">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>
+          <a href="?sort={% if current_sort == 'product__name' %}-product__name{% else %}product__name{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if movement_type %}&movement_type={{ movement_type }}{% endif %}" class="sort-link">
+            Product
+            {% if current_sort == 'product__name' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-product__name' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'movement_type' %}-movement_type{% else %}movement_type{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if movement_type %}&movement_type={{ movement_type }}{% endif %}" class="sort-link">
+            Movement Type
+            {% if current_sort == 'movement_type' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-movement_type' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'quantity' %}-quantity{% else %}quantity{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if movement_type %}&movement_type={{ movement_type }}{% endif %}" class="sort-link">
+            Quantity
+            {% if current_sort == 'quantity' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-quantity' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>Previous Stock</th>
+        <th>New Stock</th>
+        <th>Notes</th>
+        <th>
+          <a href="?sort={% if current_sort == 'created_at' %}-created_at{% else %}created_at{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if movement_type %}&movement_type={{ movement_type }}{% endif %}" class="sort-link">
+            Date
+            {% if current_sort == 'created_at' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-created_at' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for movement in page_obj %}
+      <tr>
+        <td>{{ movement.product.name }}</td>
+        <td>{{ movement.get_movement_type_display }}</td>
+        <td>{% if movement.movement_type == 'OUT' %}-{% endif %}{{ movement.quantity }}</td>
+        <td>{{ movement.previous_quantity }}</td>
+        <td>{{ movement.new_quantity }}</td>
+        <td>{{ movement.notes }}</td>
+        <td>{{ movement.created_at|date:"M d, Y H:i" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% if show_pagination %}
+    <tfoot>
+      <tr>
+        <td colspan="7">
+          <div class="pagination">
+            {% if page_obj.has_previous %}
+              <a href="?page=1{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if movement_type %}&movement_type={{ movement_type }}{% endif %}"><i class='bx bx-chevrons-left'></i></a>
+              <a href="?page={{ page_obj.previous_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if movement_type %}&movement_type={{ movement_type }}{% endif %}"><i class='bx bx-chevron-left'></i></a>
+            {% else %}
+              <span class="disabled"><i class='bx bx-chevrons-left'></i></span>
+              <span class="disabled"><i class='bx bx-chevron-left'></i></span>
+            {% endif %}
+            <span class="current-page">{{ page_obj.number }}</span>
+            {% if page_obj.has_next %}
+              <a href="?page={{ page_obj.next_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if movement_type %}&movement_type={{ movement_type }}{% endif %}"><i class='bx bx-chevron-right'></i></a>
+              <a href="?page={{ page_obj.paginator.num_pages }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if movement_type %}&movement_type={{ movement_type }}{% endif %}"><i class='bx bx-chevrons-right'></i></a>
+            {% else %}
+              <span class="disabled"><i class='bx bx-chevron-right'></i></span>
+              <span class="disabled"><i class='bx bx-chevrons-right'></i></span>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+    </tfoot>
+    {% endif %}
+  </table>
+</div>
+
+{% if not page_obj %}
+<div class="no-results">
+  <p>No stock movements found.</p>
+</div>
+{% endif %}
+
+<style>
+.search-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.search-input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.search-input[type="text"] {
+  flex: 1;
+  max-width: 300px;
+}
+
+.search-btn {
+  padding: 8px 16px;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.search-btn:hover {
+  background: #2980b9;
+}
+</style>
+
+{% endblock %}

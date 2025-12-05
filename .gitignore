@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+venv/
+.env/
+*.env
+
+# Django stuff
+*.log
+*.pot
+*.pyc
+db.sqlite3
+media/
+staticfiles/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Ignore all migrations
+*/migrations/
+
+# BeiZuri Print Server - Keep only essential installation files
+# Ignore everything in this folder
+beizuri-print-server/*
+
+# But keep these essential files
+!beizuri-print-server/install_print_server.bat
+!beizuri-print-server/install_print_server.sh
+!beizuri-print-server/requirements.txt
+!beizuri-print-server/print_server.py
+!beizuri-print-server/README.md
+!beizuri-print-server/.gitignore
+!beizuri-print-server/libusb-1.0.dll
+!beizuri-print-server/setup_printer.py

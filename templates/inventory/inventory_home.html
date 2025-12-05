@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Inventory Dashboard{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/inventory/inventory_home.css' %}?v={{ STATIC_VERSION }}">
+<div class="dashboard-header">
+    <h1>Inventory Dashboard</h1>
+    <div class="header-actions">
+        <a href="{% url 'products:product_list' %}" class="btn btn-primary">
+            <i class="bx bx-package"></i> All Products
+        </a>
+        <a href="{% url 'products:add_product' %}" class="btn btn-success">
+            <i class="bx bx-plus-circle"></i> Add Product
+        </a>
+    </div>
+</div>
+
+<div class="dashboard-row">
+    <div class="dashboard-col">
+        <div class="stat-card bg-primary">
+            <i class="bx bx-package stat-icon"></i>
+            <div class="stat-info">
+                <h6>Total Products</h6>
+                <h3>{{ total_products }}</h3>
+            </div>
+        </div>
+    </div>
+    
+    <div class="dashboard-col">
+        <a href="{% url 'inventory:low_stock_products' %}" class="stat-card-clickable">
+            <div class="stat-card bg-warning">
+                <i class="bx bx-error-circle stat-icon"></i>
+                <div class="stat-info">
+                    <h6>Low Stock</h6>
+                    <h3>{{ low_stock_count }}</h3>
+                    <small>Click to view</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    
+    <div class="dashboard-col">
+        <div class="stat-card bg-danger">
+            <i class="bx bx-x-circle stat-icon"></i>
+            <div class="stat-info">
+                <h6>Out of Stock</h6>
+                <h3>{{ out_of_stock_count }}</h3>
+            </div>
+        </div>
+    </div>
+    
+    <div class="dashboard-col">
+        <div class="stat-card bg-success">
+            <i class="bx bx-money stat-icon"></i>
+            <div class="stat-info">
+                <h6>Inventory Value</h6>
+                <h3>KES {{ total_inventory_value|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="profit-section">
+    <h5>Sales Profit Breakdown</h5>
+    <div class="profit-grid">
+        <div class="profit-item retail">
+            <h6>Retail Sale Profit</h6>
+            <h4>KES {{ retail_profit|floatformat:2 }}</h4>
+        </div>
+        
+        <div class="profit-item wholesale">
+            <h6>Wholesale Sale Profit</h6>
+            <h4>KES {{ wholesale_profit|floatformat:2 }}</h4>
+        </div>
+        
+        <div class="profit-item special">
+            <h6>Special Sale Profit</h6>
+            <h4>KES {{ special_profit|floatformat:2 }}</h4>
+        </div>
+        
+        <div class="profit-item total">
+            <h6>Total Profit</h6>
+            <h4>KES {{ total_profit|floatformat:2 }}</h4>
+        </div>
+    </div>
+</div>
+
+<div class="info-cards">
+    <div class="info-card categories">
+        <i class="bx bx-tag"></i>
+        <h5>{{ categories_count }}</h5>
+        <p>Categories</p>
+    </div>
+    
+    <div class="info-card brands">
+        <i class="bx bx-bookmark"></i>
+        <h5>{{ brands_count }}</h5>
+        <p>Brands</p>
+    </div>
+</div>
+
+<div class="dashboard-row">
+    <div class="dashboard-col">
+        <div class="data-section">
+            <div class="data-section-header">
+                <h5>Top Selling Products</h5>
+            </div>
+            <div class="data-section-body">
+                {% if top_selling_products %}
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>SKU</th>
+                                    <th class="text-end">Stock</th>
+                                    <th class="text-end">Sold</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in top_selling_products %}
+                                    <tr>
+                                        <td>{{ product.name }}</td>
+                                        <td><span class="badge bg-secondary">{{ product.sku }}</span></td>
+                                        <td class="text-end">
+                                            {% if product.quantity == 0 %}
+                                                <span class="badge bg-danger">{{ product.quantity }}</span>
+                                            {% elif product.is_low_stock %}
+                                                <span class="badge bg-warning">{{ product.quantity }}</span>
+                                            {% else %}
+                                                <span class="badge bg-success">{{ product.quantity }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end"><strong>{{ product.sold_count }}</strong></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <p>No sales data available</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="dashboard-col">
+        <div class="data-section">
+            <div class="data-section-header">
+                <h5>Recent Stock Movements</h5>
+            </div>
+            <div class="data-section-body">
+                {% if recent_stock_movements %}
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Type</th>
+                                    <th class="text-end">Quantity</th>
+                                    <th class="text-end">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for movement in recent_stock_movements %}
+                                    <tr>
+                                        <td>{{ movement.product.name|truncatewords:3 }}</td>
+                                        <td>
+                                            {% if movement.movement_type == 'IN' %}
+                                                <span class="badge bg-success">Stock In</span>
+                                            {% elif movement.movement_type == 'OUT' %}
+                                                <span class="badge bg-danger">Stock Out</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Adjust</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            {% if movement.movement_type == 'IN' %}
+                                                <span class="text-success">+{{ movement.quantity }}</span>
+                                            {% else %}
+                                                <span class="text-danger">-{{ movement.quantity }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">{{ movement.created_at|date:"M d, H:i" }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <p>No recent movements</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

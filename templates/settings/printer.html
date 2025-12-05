@@ -1,0 +1,347 @@
+{% extends "base.html" %} {% load static %} {% block title %}Printer Settings |
+BeiZuri POS{% endblock %} {% block content %}
+<link
+  rel="stylesheet"
+  href="{% static 'css/settings/printer.css' %}?v={{ STATIC_VERSION }}"
+/>
+
+<div class="printer-settings-container">
+  <div class="info-section">
+    <h3><i class="bx bx-info-circle"></i>How to Use Printer Settings</h3>
+    <ul class="info-list">
+      <li>
+        <strong>Test Printer:</strong> Click to send a test print and verify
+        your printer is working correctly
+      </li>
+      <li>
+        <strong>Printer Status:</strong> Check the current connection status and
+        readiness of your printer
+      </li>
+      <li>
+        <strong>Printer Configuration:</strong> View your printer settings
+        including server URL, vendor ID, and paper width
+      </li>
+      <li>
+        <strong>All Settings:</strong> Return to the main settings page to
+        configure other system options
+      </li>
+    </ul>
+  </div>
+
+  <div class="printer-grid">
+    <div class="printer-link" onclick="openTestModal()">
+      <i class="bx bx-test-tube"></i>
+      <span>Test Printer</span>
+    </div>
+
+    <div class="printer-link" onclick="openStatusModal()">
+      <i class="bx bx-check-circle"></i>
+      <span>Printer Status</span>
+    </div>
+
+    <div class="printer-link" onclick="openConfigModal()">
+      <i class="bx bx-wrench"></i>
+      <span>Printer Configuration</span>
+    </div>
+
+    <a href="{% url 'settings:settings_home' %}" class="printer-link">
+      <i class="bx bx-cog"></i>
+      <span>All Settings</span>
+    </a>
+  </div>
+</div>
+
+<div id="testModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">
+        <i class="bx bx-test-tube"></i>
+        <span>Test Printer</span>
+      </div>
+      <button class="modal-close" onclick="closeTestModal()">
+        <i class="bx bx-x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="test-animation">
+        <i class="bx bx-printer printer-icon-large"></i>
+      </div>
+      <div class="test-status" id="testStatus">Sending test print...</div>
+      <div class="test-message" id="testMessage">
+        Please wait while we test your printer
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="statusModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">
+        <i class="bx bx-info-circle"></i>
+        <span>Printer Status</span>
+      </div>
+      <button class="modal-close" onclick="closeStatusModal()">
+        <i class="bx bx-x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="status-content" id="statusContent">
+        <div class="status-indicator loading">
+          <i class="bx bx-loader-alt bx-spin"></i>
+        </div>
+        <div class="status-title">Checking printer...</div>
+        <div class="status-message">Please wait</div>
+      </div>
+      <button class="refresh-button" onclick="checkPrinterStatus()">
+        <i class="bx bx-refresh"></i>
+        Refresh Status
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="configModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">
+        <i class="bx bx-wrench"></i>
+        <span>Printer Configuration</span>
+      </div>
+      <button class="modal-close" onclick="closeConfigModal()">
+        <i class="bx bx-x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="status-details">
+        <div class="status-detail-item">
+          <span class="status-detail-label">Print Server URL:</span>
+          <span class="status-detail-value">http://localhost:8080</span>
+        </div>
+        <div class="status-detail-item">
+          <span class="status-detail-label">Vendor ID:</span>
+          <span class="status-detail-value">0x0483</span>
+        </div>
+        <div class="status-detail-item">
+          <span class="status-detail-label">Product ID:</span>
+          <span class="status-detail-value">0x5743</span>
+        </div>
+        <div class="status-detail-item">
+          <span class="status-detail-label">Endpoint:</span>
+          <span class="status-detail-value">0x01</span>
+        </div>
+        <div class="status-detail-item">
+          <span class="status-detail-label">Paper Width:</span>
+          <span class="status-detail-value">48 characters</span>
+        </div>
+      </div>
+      <div class="test-message" style="margin-top: 20px; text-align: center">
+        Configuration loaded from printer_config.json
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === name + "=") {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  const csrftoken = getCookie("csrftoken");
+
+  function openTestModal() {
+    const statusEl = document.getElementById("testStatus");
+    const messageEl = document.getElementById("testMessage");
+
+    statusEl.textContent = "Sending test print...";
+    statusEl.style.color = "#2c3e50";
+    messageEl.textContent = "Please wait while we test your printer";
+
+    document.getElementById("testModal").classList.add("active");
+    testPrinter();
+  }
+
+  function closeTestModal() {
+    document.getElementById("testModal").classList.remove("active");
+  }
+
+  function testPrinter() {
+    fetch("{% url 'sales:test_printer' %}", {
+      method: "GET",
+      headers: {
+        "X-CSRFToken": csrftoken,
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        const statusEl = document.getElementById("testStatus");
+        const messageEl = document.getElementById("testMessage");
+
+        if (data.success) {
+          statusEl.textContent = "Test Print Successful!";
+          statusEl.style.color = "#27ae60";
+          messageEl.textContent =
+            data.message || "Your printer is working correctly";
+          document.querySelector('.printer-icon-large').style.animation = 'none';
+          setTimeout(() => {
+            closeTestModal();
+          }, 5000);
+        } else {
+          statusEl.textContent = "Test Print Failed";
+          statusEl.style.color = "#e74c3c";
+          messageEl.textContent =
+            data.error ||
+            data.message ||
+            "Unable to print. Please check your printer connection.";
+          document.querySelector('.printer-icon-large').style.animation = 'none';
+        }
+      })
+      .catch((error) => {
+        document.getElementById("testStatus").textContent = "Connection Error";
+        document.getElementById("testStatus").style.color = "#e74c3c";
+        document.getElementById("testMessage").textContent =
+          error.message || "Unable to connect to the server";
+      });
+  }
+
+  function openStatusModal() {
+    const statusContent = document.getElementById("statusContent");
+
+    statusContent.innerHTML = `
+        <div class="status-indicator loading">
+            <i class='bx bx-loader-alt bx-spin'></i>
+        </div>
+        <div class="status-title">Checking printer...</div>
+        <div class="status-message">Please wait</div>
+    `;
+
+    document.getElementById("statusModal").classList.add("active");
+    checkPrinterStatus();
+  }
+
+  function closeStatusModal() {
+    document.getElementById("statusModal").classList.remove("active");
+  }
+
+  function checkPrinterStatus() {
+    const statusContent = document.getElementById("statusContent");
+
+    statusContent.innerHTML = `
+        <div class="status-indicator loading">
+            <i class='bx bx-loader-alt bx-spin'></i>
+        </div>
+        <div class="status-title">Checking printer...</div>
+        <div class="status-message">Please wait</div>
+    `;
+
+    fetch("{% url 'sales:printer_status' %}", {
+      method: "GET",
+      headers: {
+        "X-CSRFToken": csrftoken,
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          const indicatorClass = data.printer_ready ? "ready" : "error";
+          const indicatorIcon = data.printer_ready
+            ? "bx-check-circle"
+            : "bx-x-circle";
+          const statusTitle = data.printer_ready
+            ? "Printer Ready"
+            : "Printer Not Ready";
+
+          statusContent.innerHTML = `
+                <div class="status-indicator ${indicatorClass}">
+                    <i class='bx ${indicatorIcon}'></i>
+                </div>
+                <div class="status-title">${statusTitle}</div>
+                <div class="status-message">${data.printer_message}</div>
+                <div class="status-details">
+                    <div class="status-detail-item">
+                        <span class="status-detail-label">Status:</span>
+                        <span class="status-detail-value">${
+                          data.printer_ready ? "Connected" : "Disconnected"
+                        }</span>
+                    </div>
+                    <div class="status-detail-item">
+                        <span class="status-detail-label">Last Check:</span>
+                        <span class="status-detail-value">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                </div>
+            `;
+        } else {
+          statusContent.innerHTML = `
+                <div class="status-indicator error">
+                    <i class='bx bx-error'></i>
+                </div>
+                <div class="status-title">Error</div>
+                <div class="status-message">${
+                  data.error || "Unable to check printer status"
+                }</div>
+            `;
+        }
+      })
+      .catch((error) => {
+        statusContent.innerHTML = `
+            <div class="status-indicator error">
+                <i class='bx bx-error-circle'></i>
+            </div>
+            <div class="status-title">Connection Error</div>
+            <div class="status-message">Unable to connect to the server. Please try again.</div>
+        `;
+      });
+  }
+
+  function openConfigModal() {
+    document.getElementById("configModal").classList.add("active");
+  }
+
+  function closeConfigModal() {
+    document.getElementById("configModal").classList.remove("active");
+  }
+
+  document.getElementById("testModal").addEventListener("click", function (e) {
+    if (e.target === this) closeTestModal();
+  });
+
+  document
+    .getElementById("statusModal")
+    .addEventListener("click", function (e) {
+      if (e.target === this) closeStatusModal();
+    });
+
+  document
+    .getElementById("configModal")
+    .addEventListener("click", function (e) {
+      if (e.target === this) closeConfigModal();
+    });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      closeTestModal();
+      closeStatusModal();
+      closeConfigModal();
+    }
+  });
+</script>
+
+{% endblock %}

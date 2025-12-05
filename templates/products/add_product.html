@@ -1,0 +1,299 @@
+{% extends 'base.html' %}
+{% block title %}Add Product - BeiZuri Shop{% endblock %}
+{% load static %}
+{% block content %}
+{{ form.media }}
+<link rel="stylesheet" href="{% static 'css/products/add_product.css' %}?v={{ STATIC_VERSION }}">
+
+<div class="page-header">
+  <div class="header-content">
+    <div>
+      <h1>Add New Product</h1>
+      <p class="product-sku">Create a new product entry</p>
+    </div>
+    <a href="{% url 'products:product_list' %}" class="btn btn-secondary">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Back to Products
+    </a>
+  </div>
+</div>
+
+<div class="product-detail">
+  <form method="post" id="productForm">
+    {% csrf_token %}
+
+    <div class="form-section">
+      <div class="section-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 2L3 7V17C3 17.5304 3.21071 18.0391 3.58579 18.4142C3.96086 18.7893 4.46957 19 5 19H15C15.5304 19 16.0391 18.7893 16.4142 18.4142C16.7893 18.0391 17 17.5304 17 17V7L10 2Z" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M7 19V10H13V19" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h3>Basic Information</h3>
+      </div>
+      <div class="form-content">
+        <div class="form-group required">
+          <label for="{{ form.name.id_for_label }}">Product Name</label>
+          {{ form.name }}
+          {% if form.name.errors %}
+          <span class="error">{{ form.name.errors.0 }}</span>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.description.id_for_label }}">Description</label>
+          {{ form.description }}
+          {% if form.description.errors %}
+          <span class="error">{{ form.description.errors.0 }}</span>
+          {% endif %}
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.category.id_for_label }}">Category</label>
+            {{ form.category }}
+            {% if form.category.errors %}
+            <span class="error">{{ form.category.errors.0 }}</span>
+            {% endif %}
+          </div>
+
+          <div class="form-group">
+            <label for="{{ form.brand.id_for_label }}">Brand</label>
+            {{ form.brand }}
+            {% if form.brand.errors %}
+            <span class="error">{{ form.brand.errors.0 }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="3" width="14" height="14" rx="2" stroke="#00bcd4" stroke-width="1.5"/>
+          <path d="M7 3V17M13 3V17M3 7H17M3 13H17" stroke="#00bcd4" stroke-width="1.5"/>
+        </svg>
+        <h3>Product Identification</h3>
+      </div>
+      <div class="form-content">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.sku.id_for_label }}">SKU</label>
+            {{ form.sku }}
+            <small class="help-text">Leave blank to auto-generate</small>
+            {% if form.sku.errors %}
+            <span class="error">{{ form.sku.errors.0 }}</span>
+            {% endif %}
+          </div>
+
+          <div class="form-group">
+            <label for="barcode_input">Barcode</label>
+            <input type="text" id="barcode_input" class="barcode-input" placeholder="Scan or enter barcode">
+            <small class="help-text">Scan barcode or press Enter to add multiple</small>
+            <div id="barcode_list" class="barcode-grid"></div>
+            {{ form.barcodes }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2Z" stroke="#00bcd4" stroke-width="1.5"/>
+          <path d="M10 6V10L13 11.5" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M7 14H10" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <h3>Pricing</h3>
+      </div>
+      <div class="form-content">
+        <div class="form-row">
+          <div class="form-group required">
+            <label for="{{ form.cost_price.id_for_label }}">Cost Price</label>
+            {{ form.cost_price }}
+            {% if form.cost_price.errors %}
+            <span class="error">{{ form.cost_price.errors.0 }}</span>
+            {% endif %}
+          </div>
+
+          <div class="form-group required">
+            <label for="{{ form.special_price.id_for_label }}">Special Price</label>
+            {{ form.special_price }}
+            {% if form.special_price.errors %}
+            <span class="error">{{ form.special_price.errors.0 }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group required">
+            <label for="{{ form.wholesale_price.id_for_label }}">Wholesale Price</label>
+            {{ form.wholesale_price }}
+            {% if form.wholesale_price.errors %}
+            <span class="error">{{ form.wholesale_price.errors.0 }}</span>
+            {% endif %}
+          </div>
+
+          <div class="form-group required">
+            <label for="{{ form.selling_price.id_for_label }}">Selling Price</label>
+            {{ form.selling_price }}
+            {% if form.selling_price.errors %}
+            <span class="error">{{ form.selling_price.errors.0 }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="4" width="16" height="13" rx="1" stroke="#00bcd4" stroke-width="1.5"/>
+          <path d="M6 4V2M14 4V2M2 8H18" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="6" cy="11" r="0.5" fill="#00bcd4"/>
+          <circle cx="10" cy="11" r="0.5" fill="#00bcd4"/>
+          <circle cx="14" cy="11" r="0.5" fill="#00bcd4"/>
+          <circle cx="6" cy="14" r="0.5" fill="#00bcd4"/>
+          <circle cx="10" cy="14" r="0.5" fill="#00bcd4"/>
+        </svg>
+        <h3>Inventory</h3>
+      </div>
+      <div class="form-content">
+        <div class="form-row">
+          <div class="form-group required">
+            <label for="{{ form.quantity.id_for_label }}">Quantity</label>
+            {{ form.quantity }}
+            {% if form.quantity.errors %}
+            <span class="error">{{ form.quantity.errors.0 }}</span>
+            {% endif %}
+          </div>
+
+          <div class="form-group">
+            <label for="{{ form.low_stock_threshold.id_for_label }}">Low Stock Threshold</label>
+            {{ form.low_stock_threshold }}
+            {% if form.low_stock_threshold.errors %}
+            <span class="error">{{ form.low_stock_threshold.errors.0 }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="{{ form.weight.id_for_label }}">Weight (kg)</label>
+            {{ form.weight }}
+            {% if form.weight.errors %}
+            <span class="error">{{ form.weight.errors.0 }}</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="form-errors">
+      {% for error in form.non_field_errors %}
+      <p class="error">{{ error }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="product-actions">
+      <button type="submit" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 3.33337V12.6667M3.33333 8H12.6667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Add Product
+      </button>
+      <a href="{% url 'products:product_list' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("productForm");
+    const costPrice = document.querySelector('input[name="cost_price"]');
+    const wholesalePrice = document.querySelector('input[name="wholesale_price"]');
+    const sellingPrice = document.querySelector('input[name="selling_price"]');
+    const barcodeInput = document.getElementById("barcode_input");
+    const barcodeList = document.getElementById("barcode_list");
+    const barcodesField = document.querySelector('input[name="barcodes"]');
+    
+    let barcodes = [];
+
+    function updateBarcodesList() {
+      barcodeList.innerHTML = '';
+      barcodes.forEach((barcode, index) => {
+        const tag = document.createElement('div');
+        tag.className = 'barcode-tag';
+        tag.innerHTML = `
+          <span>${barcode}</span>
+          <button type="button" class="remove-barcode" data-index="${index}">&times;</button>
+        `;
+        barcodeList.appendChild(tag);
+      });
+      barcodesField.value = JSON.stringify(barcodes);
+    }
+
+    function addBarcode(value) {
+      const trimmedValue = value.trim();
+      if (trimmedValue && !barcodes.includes(trimmedValue)) {
+        barcodes.push(trimmedValue);
+        updateBarcodesList();
+        barcodeInput.value = '';
+      } else if (barcodes.includes(trimmedValue)) {
+        alert('This barcode has already been added');
+        barcodeInput.value = '';
+      }
+    }
+
+    barcodeInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addBarcode(this.value);
+      }
+    });
+
+    barcodeInput.addEventListener('blur', function() {
+      if (this.value.trim()) {
+        addBarcode(this.value);
+      }
+    });
+
+    barcodeList.addEventListener('click', function(e) {
+      if (e.target.classList.contains('remove-barcode')) {
+        const index = parseInt(e.target.dataset.index);
+        barcodes.splice(index, 1);
+        updateBarcodesList();
+      }
+    });
+
+    function validatePrices() {
+      const cost = parseFloat(costPrice.value) || 0;
+      const wholesale = parseFloat(wholesalePrice.value) || 0;
+      const selling = parseFloat(sellingPrice.value) || 0;
+      const special = parseFloat(document.querySelector('input[name="special_price"]').value) || 0;
+
+      if (cost && special && wholesale && selling) {
+        if (cost >= special || special >= wholesale || wholesale >= selling) {
+          return false;
+        }
+      } else if (cost && special && selling) {
+        if (cost >= special || special >= selling) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    form.addEventListener("submit", function (e) {
+      if (!validatePrices()) {
+        e.preventDefault();
+        alert("Please ensure: Cost Price < Special Price < Wholesale Price < Selling Price");
+      }
+    });
+  });
+</script>
+{% endblock %}

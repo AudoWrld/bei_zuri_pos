@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Sales Analytics | BeiZuri POS{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/sales/sale_analytics.css' %}?v={{ STATIC_VERSION }}">
+
+<div class="analytics-container">
+    <div class="analytics-header">
+        <h1><i class='bx bx-bar-chart-alt-2'></i> Sales Analytics</h1>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card info">
+            <div class="stat-card-header">
+                <span class="stat-card-title">Today's Sales</span>
+                <i class='bx bx-calendar stat-card-icon'></i>
+            </div>
+            <div class="stat-card-value">KSh {{ today_sales.total|default:0|floatformat:2 }}</div>
+            <div class="stat-card-subtext">{{ today_sales.count|default:0 }} transactions</div>
+        </div>
+
+        <div class="stat-card success">
+            <div class="stat-card-header">
+                <span class="stat-card-title">This Week</span>
+                <i class='bx bx-trending-up stat-card-icon'></i>
+            </div>
+            <div class="stat-card-value">KSh {{ week_sales.total|default:0|floatformat:2 }}</div>
+            <div class="stat-card-subtext">{{ week_sales.count|default:0 }} transactions</div>
+        </div>
+
+        <div class="stat-card warning">
+            <div class="stat-card-header">
+                <span class="stat-card-title">This Month</span>
+                <i class='bx bx-line-chart stat-card-icon'></i>
+            </div>
+            <div class="stat-card-value">KSh {{ month_sales.total|default:0|floatformat:2 }}</div>
+            <div class="stat-card-subtext">{{ month_sales.count|default:0 }} transactions</div>
+        </div>
+
+        <div class="stat-card info">
+            <div class="stat-card-header">
+                <span class="stat-card-title">Average Sale</span>
+                <i class='bx bx-dollar-circle stat-card-icon'></i>
+            </div>
+            <div class="stat-card-value">KSh {{ total_sales.avg|default:0|floatformat:2 }}</div>
+            <div class="stat-card-subtext">{{ total_sales.count|default:0 }} total sales</div>
+        </div>
+    </div>
+
+    <div class="chart-section">
+        <h2><i class='bx bx-bar-chart'></i>Daily Sales Trend (Last 7 Days)</h2>
+        <div class="chart-container">
+            <canvas id="dailySalesChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-section">
+        <h2><i class='bx bx-pie-chart-alt-2'></i>Sales by Type</h2>
+        <div class="chart-container">
+            <canvas id="salesTypeChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-section">
+        <h2><i class='bx bx-trophy'></i>Top 10 Products</h2>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Product Name</th>
+                        <th>Quantity Sold</th>
+                        <th>Revenue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in top_products %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ product.product__name }}</td>
+                        <td>{{ product.quantity }}</td>
+                        <td>KSh {{ product.revenue|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 40px; color: #7f8c8d;">
+                            No product data available
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const dailySalesData = JSON.parse('{{ daily_sales|escapejs }}');
+const salesByTypeData = JSON.parse('{{ sales_by_type|escapejs }}');
+
+const dailyLabels = dailySalesData.map(item => item.day);
+const dailyTotals = dailySalesData.map(item => parseFloat(item.total || 0));
+const dailyCounts = dailySalesData.map(item => item.count || 0);
+
+const ctx1 = document.getElementById('dailySalesChart').getContext('2d');
+new Chart(ctx1, {
+    type: 'bar',
+    data: {
+        labels: dailyLabels,
+        datasets: [{
+            label: 'Revenue (KSh)',
+            data: dailyTotals,
+            backgroundColor: 'rgba(52, 152, 219, 0.8)',
+            borderColor: '#3498db',
+            borderWidth: 2,
+            borderRadius: 8,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top',
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'KSh ' + context.parsed.y.toLocaleString();
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return 'KSh ' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+const typeLabels = salesByTypeData.map(item => item.sale_type);
+const typeTotals = salesByTypeData.map(item => parseFloat(item.total || 0));
+
+const ctx2 = document.getElementById('salesTypeChart').getContext('2d');
+new Chart(ctx2, {
+    type: 'polarArea',
+    data: {
+        labels: typeLabels,
+        datasets: [{
+            data: typeTotals,
+            backgroundColor: [
+                'rgba(52, 152, 219, 0.7)',
+                'rgba(39, 174, 96, 0.7)',
+                'rgba(243, 156, 18, 0.7)',
+            ],
+            borderColor: [
+                '#3498db',
+                '#27ae60',
+                '#f39c12',
+            ],
+            borderWidth: 2,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'right',
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.label + ': KSh ' + context.parsed.r.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+
+{% endblock %}

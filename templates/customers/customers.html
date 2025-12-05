@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% block title %}BeiZuri Shop - Customers{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/products/product_list.css' %}?v={{ STATIC_VERSION }}">
+
+<div class="page-header">
+  <h1>Customers</h1>
+</div>
+
+<div class="search-container">
+  <form method="get" class="search-form">
+    <input type="text" name="search" class="search-input" placeholder="Search customers..." value="{{ search_query }}">
+    <button type="submit" class="search-btn">Search</button>
+  </form>
+</div>
+
+<div class="table-container">
+  <table class="data-table" id="customerTable">
+    <thead>
+      <tr>
+        <th>
+          <a href="?sort={% if current_sort == 'first_name' %}-first_name{% else %}first_name{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            First Name
+            {% if current_sort == 'first_name' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-first_name' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'last_name' %}-last_name{% else %}last_name{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Last Name
+            {% if current_sort == 'last_name' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-last_name' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'phone_number' %}-phone_number{% else %}phone_number{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Phone
+            {% if current_sort == 'phone_number' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-phone_number' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'email' %}-email{% else %}email{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Email
+            {% if current_sort == 'email' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-email' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'total_debt' %}-total_debt{% else %}total_debt{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Total Debt (KSh)
+            {% if current_sort == 'total_debt' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-total_debt' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for customer in page_obj %}
+      <tr>
+        <td><div class="text-truncate">{{ customer.first_name }}</div></td>
+        <td><div class="text-truncate">{{ customer.last_name }}</div></td>
+        <td><div class="text-truncate">{{ customer.phone_number }}</div></td>
+        <td><div class="text-truncate">{{ customer.email }}</div></td>
+        <td>
+          {% if customer.total_debt %}
+            {{ customer.total_debt }}
+          {% else %}
+            0.00
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td colspan="5">
+          <div class="pagination">
+            {% if page_obj.has_previous %}
+              <a href="?page=1{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevrons-left'></i></a>
+              <a href="?page={{ page_obj.previous_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevron-left'></i></a>
+            {% else %}
+              <span class="disabled"><i class='bx bx-chevrons-left'></i></span>
+              <span class="disabled"><i class='bx bx-chevron-left'></i></span>
+            {% endif %}
+            <span class="current-page">{{ page_obj.number }}</span>
+            {% if page_obj.has_next %}
+              <a href="?page={{ page_obj.next_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevron-right'></i></a>
+              <a href="?page={{ page_obj.paginator.num_pages }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevrons-right'></i></a>
+            {% else %}
+              <span class="disabled"><i class='bx bx-chevron-right'></i></span>
+              <span class="disabled"><i class='bx bx-chevrons-right'></i></span>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+{% if not page_obj %}
+<div class="no-results">
+  <p>No customers found.</p>
+</div>
+{% endif %}
+
+{% endblock %}

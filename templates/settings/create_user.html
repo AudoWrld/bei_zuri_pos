@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Create New User | BeiZuri POS{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/settings/create_user.css' %}?v={{ STATIC_VERSION }}">
+<div class="settings-container">
+    <div class="page-header">
+        <h1>Create New User</h1>
+    </div>
+
+    <div class="form-card">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="form-section">
+                <div class="field-group">
+                    <div class="field">
+                        <label for="{{ form.username.id_for_label }}">Username</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="error">{{ form.username.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="field">
+                        <label for="{{ form.email.id_for_label }}">Email</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="error">{{ form.email.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <div class="field">
+                        <label for="{{ form.first_name.id_for_label }}">First Name</label>
+                        {{ form.first_name }}
+                    </div>
+
+                    <div class="field">
+                        <label for="{{ form.last_name.id_for_label }}">Last Name</label>
+                        {{ form.last_name }}
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <div class="field">
+                        <label for="{{ form.phone_number.id_for_label }}">Phone Number</label>
+                        {{ form.phone_number }}
+                        {% if form.phone_number.errors %}
+                            <div class="error">{{ form.phone_number.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="field">
+                        <label for="{{ form.role.id_for_label }}">Role</label>
+                        {{ form.role }}
+                        {% if form.role.errors %}
+                            <div class="error">{{ form.role.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <div class="field">
+                        <label for="{{ form.password1.id_for_label }}">Password</label>
+                        {{ form.password1 }}
+                        {% if form.password1.errors %}
+                            <div class="error">{{ form.password1.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="field">
+                        <label for="{{ form.password2.id_for_label }}">Confirm Password</label>
+                        {{ form.password2 }}
+                        {% if form.password2.errors %}
+                            <div class="error">{{ form.password2.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="options-section">
+                    <div class="toggle">
+                        <label>
+                            {{ form.is_staff }}
+                            <span>Staff status (Can access admin)</span>
+                        </label>
+                    </div>
+
+                    <div class="toggle">
+                        <label>
+                            {{ form.is_active }}
+                            <span>Active</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">Create User</button>
+                <a href="{% url 'settings:user_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

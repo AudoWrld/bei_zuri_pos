@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+{% block title %}Sale Details - {{ sale.sale_number }}{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/products/product_details.css' %}?v={{ STATIC_VERSION }}">
+<link rel="stylesheet" href="{% static 'css/sales/sale_details.css' %}?v={{ STATIC_VERSION }}">
+<div class="page-header">
+  <div class="header-content">
+    <div>
+      <h1>Sale #{{ sale.sale_number }}</h1>
+      <p class="product-sku">Completed on {{ sale.completed_at|date:"M d, Y H:i" }}</p>
+    </div>
+    <div>
+      <a href="{% url 'sales:history' %}" class="btn btn-secondary">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Back to History
+      </a>
+      <button onclick="openReprintModal()" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 6H12M4 8H12M4 10H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+        Re-print Receipt
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="product-detail">
+  <div class="product-status-bar">
+    <div class="status-item">
+      <span class="status-label">Status</span>
+      <span class="status-badge status-active">Completed</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Items</span>
+      <span class="status-value">{{ sale_items.count }} items</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Total</span>
+      <span class="status-value">KSh {{ sale.final_amount }}</span>
+    </div>
+  </div>
+
+  <div class="product-grid">
+    <div class="product-card">
+      <div class="card-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2Z" stroke="#00bcd4" stroke-width="1.5"/>
+          <path d="M10 6V10L13 13" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <h3>Sale Information</h3>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <span class="info-label">Sale Number</span>
+          <span class="info-value info-code">{{ sale.sale_number }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Sale Type</span>
+          <span class="info-value">{{ sale.get_sale_type_display }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Cashier</span>
+          <span class="info-value">{{ sale.cashier.get_full_name|default:sale.cashier.username }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Payment Method</span>
+          <span class="info-value">{{ sale.payment_method }}</span>
+        </div>
+        {% if sale.payment_method == "Cash" and sale.money_received %}
+        <div class="info-row">
+          <span class="info-label">Money Received</span>
+          <span class="info-value">KSh {{ sale.money_received }}</span>
+        </div>
+        {% endif %}
+        {% if sale.payment_method == "Cash" and sale.change_amount %}
+        <div class="info-row">
+          <span class="info-label">Change</span>
+          <span class="info-value">KSh {{ sale.change_amount }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="card-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="10" cy="10" r="7" stroke="#00bcd4" stroke-width="1.5"/>
+          <path d="M10 6V10H14" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h3>Timestamps</h3>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <span class="info-label">Completed At</span>
+          <span class="info-value">{{ sale.completed_at|date:"M d, Y H:i:s" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Created At</span>
+          <span class="info-value">{{ sale.created_at|date:"M d, Y H:i:s" }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="card-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10C17 13.866 13.866 17 10 17" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M10 7V10L12 12" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M2 14L4 16L7 13" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h3>Totals</h3>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <span class="info-label">Subtotal</span>
+          <span class="info-value">KSh {{ sale.subtotal|default:sale.final_amount }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Discount</span>
+          <span class="info-value">KSh {{ sale.discount_amount|default:"0" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Final Amount</span>
+          <span class="info-value info-highlight">KSh {{ sale.final_amount }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="product-card full-width">
+    <div class="card-header">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="4" width="16" height="13" rx="1" stroke="#00bcd4" stroke-width="1.5"/>
+        <path d="M6 4V2M14 4V2M2 8H18" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <h3>Items Purchased</h3>
+    </div>
+    <div class="card-body">
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>SKU</th>
+              <th>Quantity</th>
+              <th>Unit Price</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in sale_items %}
+            <tr>
+              <td>{{ item.product.name }}</td>
+              <td>{{ item.product.sku }}</td>
+              <td>{{ item.quantity }}</td>
+              <td>KSh {{ item.unit_price }}</td>
+              <td>KSh {{ item.total_amount }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4" class="total-label">Total Amount:</td>
+              <td class="total-value">KSh {{ sale.final_amount }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reprint Modal -->
+<div id="reprintModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">
+        <i class='bx bx-printer'></i>
+        <span>Re-print Receipt</span>
+      </div>
+      <button class="modal-close" onclick="closeReprintModal()">
+        <i class='bx bx-x'></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="test-animation">
+        <i class='bx bx-printer printer-icon-large'></i>
+      </div>
+      <div class="test-status" id="reprintStatus">Sending reprint request...</div>
+      <div class="test-message" id="reprintMessage">Please wait while we reprint your receipt</div>
+    </div>
+  </div>
+</div>
+<script>
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+function openReprintModal() {
+  const statusEl = document.getElementById('reprintStatus');
+  const messageEl = document.getElementById('reprintMessage');
+
+  statusEl.textContent = 'Sending reprint request...';
+  statusEl.style.color = '#2c3e50';
+  messageEl.textContent = 'Please wait while we reprint your receipt';
+
+  document.getElementById('reprintModal').classList.add('active');
+  reprintReceipt();
+}
+
+function closeReprintModal() {
+  document.getElementById('reprintModal').classList.remove('active');
+}
+
+function reprintReceipt() {
+  fetch("{% url 'sales:reprint_receipt' sale.id %}", {
+    method: 'GET',
+    headers: {
+      'X-CSRFToken': csrftoken,
+      'Content-Type': 'application/json',
+    },
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(data => {
+    const statusEl = document.getElementById('reprintStatus');
+    const messageEl = document.getElementById('reprintMessage');
+
+    if (data.success) {
+      statusEl.textContent = 'Receipt Re-printed Successfully!';
+      statusEl.style.color = '#27ae60';
+      messageEl.textContent = data.message || 'Your receipt has been reprinted';
+      document.querySelector('.printer-icon-large').style.animation = 'none';
+      setTimeout(() => {
+        closeReprintModal();
+      }, 5000);
+    } else {
+      statusEl.textContent = 'Re-print Failed';
+      statusEl.style.color = '#e74c3c';
+      messageEl.textContent = data.error || data.message || 'Unable to reprint. Please check your printer connection.';
+      document.querySelector('.printer-icon-large').style.animation = 'none';
+    }
+  })
+  .catch(error => {
+    document.getElementById('reprintStatus').textContent = 'Connection Error';
+    document.getElementById('reprintStatus').style.color = '#e74c3c';
+    document.getElementById('reprintMessage').textContent = error.message || 'Unable to connect to the server';
+  });
+}
+
+document.getElementById('reprintModal').addEventListener('click', function(e) {
+  if (e.target === this) closeReprintModal();
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeReprintModal();
+  }
+});
+</script>
+
+{% endblock %}

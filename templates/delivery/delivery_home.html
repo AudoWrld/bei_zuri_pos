@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Delivery Dashboard | BeiZuri POS{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/delivery/delivery_home.css' %}?v={{ STATIC_VERSION }}">
+
+<div class="delivery-dashboard">
+    <div class="dashboard-header">
+        <h1>Delivery Dashboard</h1>
+        <div class="header-stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.total }}</div>
+                <div class="stat-label">Total Deliveries</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.pending }}</div>
+                <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.assigned }}</div>
+                <div class="stat-label">Assigned</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.in_transit }}</div>
+                <div class="stat-label">In Transit</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.delivered }}</div>
+                <div class="stat-label">Delivered</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-content">
+        <!-- Delivery Guys Section -->
+        <div class="section">
+            <h2>Delivery Guys</h2>
+            <div class="delivery-guys-grid">
+                {% for delivery_guy in delivery_guys %}
+                <div class="delivery-guy-card {% if delivery_guy.is_available %}available{% else %}busy{% endif %}">
+                    <div class="guy-header">
+                        <div class="guy-avatar">
+                            <i class='bx bxs-user'></i>
+                        </div>
+                        <div class="guy-info">
+                            <h3>{{ delivery_guy.user.get_full_name }}</h3>
+                            <p>{{ delivery_guy.user.username }}</p>
+                        </div>
+                        <div class="guy-status">
+                            {% if delivery_guy.is_available %}
+                                <span class="status-badge available">
+                                    <i class='bx bx-check-circle'></i>
+                                    Available
+                                </span>
+                            {% else %}
+                                <span class="status-badge busy">
+                                    <i class='bx bx-time-five'></i>
+                                    Busy
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if not delivery_guy.is_available %}
+                    <div class="active-delivery">
+                        <div class="delivery-info">
+                            <div class="delivery-number">{{ delivery_guy.active_delivery.delivery_number }}</div>
+                            <div class="sale-number">Sale: {{ delivery_guy.active_delivery.sale.sale_number }}</div>
+                            <div class="delivery-address">{{ delivery_guy.active_delivery.delivery_address|truncatechars:50 }}</div>
+                        </div>
+                        <div class="delivery-status">
+                            <span class="status-{{ delivery_guy.active_delivery.status }}">
+                                {{ delivery_guy.active_delivery.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="no-delivery-guys">
+                    <i class='bx bx-user-x'></i>
+                    <p>No delivery guys found</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Deliveries Section -->
+        <div class="section">
+            <h2>Recent Deliveries</h2>
+            <div class="deliveries-table-container">
+                {% if recent_deliveries %}
+                <table class="deliveries-table">
+                    <thead>
+                        <tr>
+                            <th>Delivery #</th>
+                            <th>Sale #</th>
+                            <th>Delivery Guy</th>
+                            <th>Address</th>
+                            <th>Status</th>
+                            <th>Payment</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for delivery in recent_deliveries %}
+                        <tr>
+                            <td>
+                                <div class="delivery-number">{{ delivery.delivery_number }}</div>
+                            </td>
+                            <td>
+                                <a href="{% url 'sales:sale_detail' delivery.sale.id %}" class="sale-number-link">
+                                    <div class="sale-number">{{ delivery.sale.sale_number }}</div>
+                                </a>
+                            </td>
+                            <td>
+                                {% if delivery.delivery_guy %}
+                                    <div class="delivery-guy-name">{{ delivery.delivery_guy.get_full_name }}</div>
+                                {% else %}
+                                    <span class="no-assignment">Not assigned</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="delivery-address" title="{{ delivery.delivery_address }}">
+                                    {{ delivery.delivery_address|truncatechars:40 }}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="status-badge status-{{ delivery.status }}">
+                                    {{ delivery.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="payment-status status-{{ delivery.payment_status }}">
+                                    {{ delivery.get_payment_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="created-date">{{ delivery.created_at|date:"M d, H:i" }}</div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="no-deliveries">
+                    <i class='bx bx-package'></i>
+                    <p>No deliveries found</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Basic responsive layout */
+@media (max-width: 768px) {
+    .delivery-guys-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .deliveries-table {
+        font-size: 12px;
+    }
+
+    .deliveries-table th,
+    .deliveries-table td {
+        padding: 8px 4px;
+    }
+}
+</style>
+{% endblock %}

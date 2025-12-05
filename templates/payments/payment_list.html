@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% block title %}BeiZuri Shop - Payments{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/products/product_list.css' %}?v={{ STATIC_VERSION }}">
+
+<div class="page-header">
+  <h1>Payments</h1>
+  <div class="header-actions">
+    <a href="{% url 'settings:settings_home' %}" class="btn btn-secondary">Back to Settings</a>
+  </div>
+</div>
+
+<div class="search-container">
+  <form method="get" class="search-form">
+    <input type="text" name="search" class="search-input" placeholder="Search payments..." value="{{ search_query }}">
+    <button type="submit" class="search-btn">Search</button>
+  </form>
+</div>
+
+<div class="table-container">
+  <table class="data-table" id="paymentTable">
+    <thead>
+      <tr>
+        <th>
+          <a href="?sort={% if current_sort == 'transaction_reference' %}-transaction_reference{% else %}transaction_reference{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Reference
+            {% if current_sort == 'transaction_reference' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-transaction_reference' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'payment_type' %}-payment_type{% else %}payment_type{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Type
+            {% if current_sort == 'payment_type' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-payment_type' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'amount' %}-amount{% else %}amount{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Amount
+            {% if current_sort == 'amount' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-amount' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>Phone</th>
+        <th>
+          <a href="?sort={% if current_sort == 'status' %}-status{% else %}status{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Status
+            {% if current_sort == 'status' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-status' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>M-PESA Receipt</th>
+        <th>
+          <a href="?sort={% if current_sort == 'created_at' %}-created_at{% else %}created_at{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Created
+            {% if current_sort == 'created_at' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-created_at' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for payment in page_obj %}
+      <tr>
+        <td><div class="text-truncate">{{ payment.transaction_reference }}</div></td>
+        <td>
+          <span class="payment-type {{ payment.payment_type }}">
+            {{ payment.get_payment_type_display }}
+          </span>
+        </td>
+        <td>{{ payment.amount }}</td>
+        <td>{{ payment.phone_number|default:"-" }}</td>
+        <td>
+          <span class="status-badge status-{{ payment.status }}">
+            {{ payment.get_status_display }}
+          </span>
+        </td>
+        <td>{{ payment.mpesa_receipt_number|default:"-" }}</td>
+        <td>{{ payment.created_at|date:"M d, Y H:i" }}</td>
+        <td>{{ payment.notes|truncatechars:50|default:"-" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td colspan="8">
+          <div class="pagination">
+            {% if page_obj.has_previous %}
+              <a href="?page=1{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevrons-left'></i></a>
+              <a href="?page={{ page_obj.previous_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevron-left'></i></a>
+            {% else %}
+              <span class="disabled"><i class='bx bx-chevrons-left'></i></span>
+              <span class="disabled"><i class='bx bx-chevron-left'></i></span>
+            {% endif %}
+            <span class="current-page">{{ page_obj.number }}</span>
+            {% if page_obj.has_next %}
+              <a href="?page={{ page_obj.next_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevron-right'></i></a>
+              <a href="?page={{ page_obj.paginator.num_pages }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevrons-right'></i></a>
+            {% else %}
+              <span class="disabled"><i class='bx bx-chevron-right'></i></span>
+              <span class="disabled"><i class='bx bx-chevrons-right'></i></span>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+{% if not page_obj %}
+<div class="no-results">
+  <p>No payments found for the selected period.</p>
+</div>
+{% endif %}
+
+<style>
+.payment-type {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.payment-type.mpesa {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.payment-type.cash {
+    background: #e8f5e8;
+    color: #2e7d32;
+}
+
+.payment-type.debt {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.status-completed {
+    background: #e8f5e8;
+    color: #2e7d32;
+}
+
+.status-failed {
+    background: #ffebee;
+    color: #d32f2f;
+}
+
+.status-cancelled {
+    background: #f5f5f5;
+    color: #616161;
+}
+</style>
+
+{% endblock %}

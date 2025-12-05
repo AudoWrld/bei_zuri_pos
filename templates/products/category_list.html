@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Categories - BeiZuri Shop{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/products/product_list.css' %}?v={{ STATIC_VERSION }}">
+<div class="page-header">
+  <h1>Categories</h1>
+  <div class="header-actions">
+    <a href="{% url 'products:product_list' %}" class="btn btn-secondary">Back to Products</a>
+    {% if request.user.can_add_products %}
+    <a href="{% url 'products:add_category' %}" class="btn btn-primary">New Category</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="table-container">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+        <th>Active</th>
+        <th>Product Count</th>
+        <th>Created</th>
+        {% if request.user.can_edit_products %}
+        <th>Actions</th>
+        {% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for category in categories %}
+      <tr>
+        <td><div class="text-truncate">{{ category.name }}</div></td>
+        <td><div class="text-truncate">{{ category.description|default:"No description" }}</div></td>
+        <td>
+          <span class="status-badge {% if category.is_active %}status-active{% else %}status-inactive{% endif %}">
+            {% if category.is_active %}Active{% else %}Inactive{% endif %}
+          </span>
+        </td>
+        <td>{{ category.products.count }}</td>
+        <td>{{ category.created_at|date:"M d, Y" }}</td>
+        {% if request.user.can_edit_products %}
+        <td>
+          <div class="action-links">
+            <a href="{% url 'products:update_category' category.pk %}" class="action-link">Update</a>
+          </div>
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

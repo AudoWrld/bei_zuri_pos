@@ -1,0 +1,293 @@
+{% extends 'base.html' %}
+{% block title %}{{ product.name }} - BeiZuri Shop{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/products/product_details.css' %}?v={{ STATIC_VERSION }}">
+<div class="page-header">
+  <div class="header-content">
+    <div>
+      <h1>{{ product.name }}</h1>
+      <p class="product-sku">SKU: {{ product.sku }}</p>
+    </div>
+    <a href="{% url 'products:product_list' %}" class="btn btn-secondary">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Back to Products
+    </a>
+  </div>
+</div>
+
+<div class="product-detail">
+  <div class="product-status-bar">
+    <div class="status-item">
+      <span class="status-label">Status</span>
+      <span class="status-badge {% if product.is_active %}status-active{% else %}status-inactive{% endif %}">
+        {% if product.is_active %}Active{% else %}Inactive{% endif %}
+      </span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Stock</span>
+      <span class="status-badge {% if product.is_in_stock %}status-in-stock{% elif product.is_low_stock %}status-low-stock{% else %}status-out-stock{% endif %}">
+        {% if product.is_in_stock %}
+          {% if product.is_low_stock %}Low Stock{% else %}In Stock{% endif %}
+        {% else %}Out of Stock{% endif %}
+      </span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Quantity</span>
+      <span class="status-value">{{ product.quantity }} units</span>
+    </div>
+  </div>
+
+  <div class="product-grid">
+    <div class="product-card">
+      <div class="card-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2Z" stroke="#00bcd4" stroke-width="1.5"/>
+          <path d="M10 6V10L13 13" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <h3>Basic Information</h3>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <span class="info-label">Name</span>
+          <span class="info-value">{{ product.name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Description</span>
+          <span class="info-value">{{ product.description|default:"No description" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Category</span>
+          <span class="info-value">{{ product.category|default:"No category" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Brand</span>
+          <span class="info-value">{{ product.brand|default:"No brand" }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="card-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="3" width="14" height="14" rx="2" stroke="#00bcd4" stroke-width="1.5"/>
+          <path d="M7 3V17M13 3V17M3 7H17M3 13H17" stroke="#00bcd4" stroke-width="1.5"/>
+        </svg>
+        <h3>Identification</h3>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <span class="info-label">SKU</span>
+          <span class="info-value info-code">{{ product.sku }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Barcode</span>
+          <span class="info-value info-code">{{ product.barcode }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Slug</span>
+          <span class="info-value info-code">{{ product.slug }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="card-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10C17 13.866 13.866 17 10 17" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M10 7V10L12 12" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M2 14L4 16L7 13" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h3>Pricing</h3>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <span class="info-label">Cost Price</span>
+          <span class="info-value">KSh {{ product.cost_price }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Wholesale Price</span>
+          <span class="info-value info-highlight">KSh {{ product.wholesale_price|default:"Not set" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Retail Price</span>
+          <span class="info-value info-highlight">KSh {{ product.selling_price }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Special Price</span>
+          <span class="info-value info-highlight">KSh {{ product.special_price }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="card-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="4" width="16" height="13" rx="1" stroke="#00bcd4" stroke-width="1.5"/>
+          <path d="M6 4V2M14 4V2M2 8H18" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <h3>Inventory</h3>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <span class="info-label">Quantity</span>
+          <span class="info-value info-highlight">{{ product.quantity }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Low Stock Threshold</span>
+          <span class="info-value">{{ product.low_stock_threshold }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Weight</span>
+          <span class="info-value">{{ product.weight|default:"Not set" }} kg</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Status</span>
+          <span class="info-value">{% if product.is_active %}Active{% else %}Inactive{% endif %}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">In Stock</span>
+          <span class="info-value">{% if product.is_in_stock %}Yes{% else %}No{% endif %}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Low Stock</span>
+          <span class="info-value">{% if product.is_low_stock %}Yes{% else %}No{% endif %}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="card-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 3L3 14C3 15.6569 4.34315 17 6 17H17" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M7 13V10M10 13V7M13 13V9M16 13V5" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <h3>Statistics</h3>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <span class="info-label">Sold Count</span>
+          <span class="info-value">{{ product.sold_count }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Revenue Generated</span>
+          <span class="info-value info-highlight">KSh {{ product.revenue_generated }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Profit Margin</span>
+          <span class="info-value">{{ product.profit_margin|floatformat:2 }}%</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Total Profit</span>
+          <span class="info-value info-highlight">KSh {{ product.total_profit }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="card-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="10" cy="10" r="7" stroke="#00bcd4" stroke-width="1.5"/>
+          <path d="M10 6V10H14" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h3>Timestamps</h3>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <span class="info-label">Created</span>
+          <span class="info-value">{{ product.created_at|date:"M d, Y H:i" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Updated</span>
+          <span class="info-value">{{ product.updated_at|date:"M d, Y H:i" }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="product-actions">
+    {% if request.user.can_edit_products %}
+    <a href="{% url 'products:update_product' product.slug %}" class="btn btn-primary">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11.333 2.00004C11.5081 1.82494 11.716 1.68605 11.9447 1.59129C12.1735 1.49653 12.4187 1.44775 12.6663 1.44775C12.914 1.44775 13.1592 1.49653 13.3879 1.59129C13.6167 1.68605 13.8246 1.82494 13.9997 2.00004C14.1748 2.17513 14.3137 2.383 14.4084 2.61178C14.5032 2.84055 14.552 3.08575 14.552 3.33337C14.552 3.58099 14.5032 3.82619 14.4084 4.05497C14.3137 4.28374 14.1748 4.49161 13.9997 4.66671L5.33301 13.3334L1.99967 14.3334L2.99967 11L11.333 2.00004Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Update Product
+    </a>
+    <a href="{% url 'products:toggle_active' product.slug %}" class="btn {% if product.is_active %}btn-warning{% else %}btn-success{% endif %}">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {% if product.is_active %}
+        <path d="M6 4V12M10 4V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        {% else %}
+        <path d="M4 4L12 8L4 12V4Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        {% endif %}
+      </svg>
+      {% if product.is_active %}Deactivate Product{% else %}Activate Product{% endif %}
+    </a>
+    {% endif %}
+    {% if request.user.can_manage_inventory %}
+    <a href="#" class="btn btn-secondary" onclick="openAddStockModal({{ product.pk }}, '{{ product.name }}')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 3.33337V12.6667M3.33333 8H12.6667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      Add Stock
+    </a>
+    {% endif %}
+    <a href="#" class="btn btn-info">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 6H12M4 8H12M4 10H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      Print Barcode
+    </a>
+  </div>
+</div>
+
+<div id="addStockModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Add Stock to <span id="modalProductName"></span></h2>
+      <span class="close" onclick="closeAddStockModal()">&times;</span>
+    </div>
+    <form id="addStockForm" method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="quantity">Quantity to Add:</label>
+        <input type="number" id="quantity" name="quantity" min="1" required>
+      </div>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary">Add Stock</button>
+        <button type="button" class="btn btn-secondary" onclick="closeAddStockModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openAddStockModal(productId, productName) {
+  document.getElementById('modalProductName').textContent = productName;
+  document.getElementById('addStockForm').action = `/products/add_stock/${productId}/`;
+  document.getElementById('addStockModal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAddStockModal() {
+  document.getElementById('addStockModal').style.display = 'none';
+  document.body.style.overflow = 'none';
+}
+
+window.onclick = function(event) {
+  const modal = document.getElementById('addStockModal');
+  if (event.target == modal) {
+    closeAddStockModal();
+  }
+}
+
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    closeAddStockModal();
+  }
+});
+</script>
+{% endblock %}

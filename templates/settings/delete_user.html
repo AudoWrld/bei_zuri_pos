@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Delete User | BeiZuri POS{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/settings/delete_user.css' %}?v={{ STATIC_VERSION }}">
+<div class="settings-container">
+    <div class="page-header">
+        <h1> Delete User</h1>
+    </div>
+
+    <div class="form-container">
+        <div class="delete-confirmation">
+            <div class="warning-icon">
+                <i class='bx bx-error-circle'></i>
+            </div>
+            <h2>Are you sure you want to delete this user?</h2>
+            <div class="user-details">
+                <p><strong>Username:</strong> {{ user.username }}</p>
+                <p><strong>Full Name:</strong> {{ user.get_full_name|default:"N/A" }}</p>
+                <p><strong>Email:</strong> {{ user.email|default:"N/A" }}</p>
+                <p><strong>Role:</strong>
+                    {% if user.is_superuser %}
+                        Superuser
+                    {% elif user.is_staff %}
+                        Staff
+                    {% else %}
+                        User
+                    {% endif %}
+                </p>
+                <p><strong>Status:</strong> {% if user.is_active %}Active{% else %}Inactive{% endif %}</p>
+            </div>
+            <p class="warning-text">This action cannot be undone. All data associated with this user will be permanently deleted.</p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger">Yes, Delete User</button>
+                <a href="{% url 'settings:user_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

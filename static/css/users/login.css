@@ -1,0 +1,151 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #d8dce6;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: none;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.login-container {
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+}
+
+.title {
+  color: #2c3e50;
+  font-size: 42px;
+  font-weight: 300;
+  margin-bottom: 40px;
+  letter-spacing: 0.5px;
+}
+
+.brand-name {
+  font-weight: 600;
+}
+
+.messages {
+  margin-bottom: 20px;
+}
+
+.alert {
+  padding: 12px 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.alert-error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.alert-success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.alert-info {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.alert-warning {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.alert-fade {
+  opacity: 0;
+  transition: opacity 0.5s ease-out;
+}
+
+.login-card {
+  background: white;
+  border-radius: 4px;
+  padding: 40px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.login-header {
+  color: #666;
+  font-size: 15px;
+  margin-bottom: 25px;
+  font-weight: 400;
+}
+
+.input-group {
+  margin-bottom: 18px;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-field {
+  width: 100%;
+  padding: 10px 40px 10px 12px;
+  border: 1px solid #d2d6de;
+  border-radius: 3px;
+  font-size: 14px;
+  outline: none;
+  background: white;
+}
+
+.input-field:focus {
+  border-color: #3c8dbc;
+  box-shadow: 0 0 0 1px rgba(60, 141, 188, 0.1);
+}
+
+.input-icon {
+  position: absolute;
+  right: 12px;
+  color: #999;
+  font-size: 18px;
+}
+
+.login-button {
+  width: 100%;
+  padding: 10px;
+  background: #3c8dbc;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.login-button:hover {
+  background: #367fa9;
+}
+
+.login-button:active {
+  background: #2f6f94;
+}

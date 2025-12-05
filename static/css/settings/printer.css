@@ -1,0 +1,399 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.printer-settings-container {
+  width: 100%;
+  padding: 0;
+  background-color: #f8f9fa;
+}
+
+.info-section {
+  background-color: #e8f4f8;
+  border-left: 4px solid #3498db;
+  padding: 20px 30px;
+  margin: 0;
+  border-bottom: 1px solid #d1e7f0;
+}
+
+.info-section h3 {
+  color: #2c3e50;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.info-section h3 i {
+  color: #3498db;
+  font-size: 24px;
+}
+
+.info-list {
+  list-style: none;
+  padding: 0;
+}
+
+.info-list li {
+  color: #34495e;
+  font-size: 14px;
+  line-height: 1.8;
+  padding: 8px 0;
+  padding-left: 25px;
+  position: relative;
+}
+
+.info-list li:before {
+  content: "▸";
+  position: absolute;
+  left: 0;
+  color: #3498db;
+  font-weight: bold;
+}
+
+.info-list li strong {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.printer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0;
+  width: 100%;
+}
+
+.printer-link {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+  background-color: white;
+  padding: 40px 20px;
+  transition: all 0.3s ease;
+  border: 1px solid #e1e8ed;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.printer-link::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, #3498db, #2980b9);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.printer-link:hover::before {
+  transform: scaleX(1);
+}
+
+.printer-link:hover {
+  background-color: #f8fbfd;
+  box-shadow: inset 0 0 0 2px #3498db;
+}
+
+.printer-link i {
+  font-size: 56px;
+  color: #3498db;
+  margin-bottom: 15px;
+  transition: color 0.3s ease;
+}
+
+.printer-link:hover i {
+  color: #2980b9;
+}
+
+.printer-link span {
+  font-size: 15px;
+  color: #2c3e50;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.5;
+  transition: color 0.3s ease;
+}
+
+.printer-link:hover span {
+  color: #3498db;
+}
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+  position: relative;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e1e8ed;
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 24px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.modal-title i {
+  font-size: 32px;
+  color: #3498db;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #7f8c8d;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.modal-close:hover {
+  background-color: #f8f9fa;
+  color: #e74c3c;
+}
+
+.modal-body {
+  text-align: center;
+}
+
+.test-animation {
+  margin: 30px 0;
+}
+
+.printer-icon-large {
+  font-size: 80px;
+  color: #3498db;
+  animation: printing 2s ease-in-out infinite;
+}
+
+@keyframes printing {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.test-status {
+  font-size: 18px;
+  color: #2c3e50;
+  margin-top: 20px;
+  font-weight: 500;
+}
+
+.test-message {
+  font-size: 14px;
+  color: #7f8c8d;
+  margin-top: 10px;
+}
+
+.status-content {
+  padding: 20px 0;
+}
+
+.status-indicator {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin: 20px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 50px;
+}
+
+.status-indicator.loading {
+  background-color: #f8f9fa;
+  color: #3498db;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.status-indicator.ready {
+  background-color: #d5f4e6;
+  color: #27ae60;
+}
+
+.status-indicator.error {
+  background-color: #fadbd8;
+  color: #e74c3c;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.status-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
+
+.status-message {
+  font-size: 16px;
+  color: #7f8c8d;
+  line-height: 1.6;
+}
+
+.status-details {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.status-detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #e1e8ed;
+}
+
+.status-detail-item:last-child {
+  border-bottom: none;
+}
+
+.status-detail-label {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.status-detail-value {
+  color: #7f8c8d;
+}
+
+.refresh-button {
+  margin-top: 20px;
+  padding: 12px 30px;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.refresh-button:hover {
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+}
+
+.refresh-button i {
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .printer-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .printer-link {
+    padding: 30px 15px;
+  }
+
+  .printer-link i {
+    font-size: 48px;
+  }
+
+  .modal-content {
+    padding: 30px 20px;
+  }
+
+  .modal-title {
+    font-size: 20px;
+  }
+
+  .info-section {
+    padding: 15px 20px;
+  }
+
+  .info-section h3 {
+    font-size: 16px;
+  }
+
+  .info-list li {
+    font-size: 13px;
+  }
+}

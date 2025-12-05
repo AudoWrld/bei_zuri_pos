@@ -1,0 +1,156 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}BeiZuri POS{% endblock %}</title>
+    
+    <script>
+      (function() {
+        var html = document.documentElement;
+        try {
+          if (window.innerWidth > 768 && localStorage.getItem("sidebarCollapsed") === "true") {
+            html.classList.add("sidebar-collapsed");
+          }
+        } catch(e) {}
+        setTimeout(function() {
+          html.classList.add("sidebar-loaded");
+        }, 0);
+      })();
+    </script>
+    
+    <link
+      href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="manifest"
+      href="{% static 'site.json' %}?v={{ STATIC_VERSION }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{% static 'css/base.css' %}?v={{ STATIC_VERSION }}"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="{% static 'images/favicon.png' %}?v={{ STATIC_VERSION }}"
+      sizes="64x64"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="{% static 'images/favicon.png' %}?v={{ STATIC_VERSION }}"
+      sizes="128x128"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="{% static 'images/favicon-96x96.png' %}?v={{ STATIC_VERSION }}"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="{% static 'images/favicon.ico' %}?v={{ STATIC_VERSION }}"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="{% static 'images/apple-touch-icon.png' %}?v={{ STATIC_VERSION }}"
+    />
+  </head>
+  <body>
+    <div class="top-nav">
+      <div class="brand">
+        <a href="{% url 'dashboard' %}">BeiZuri Shop</a>
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+      </div>
+      <div class="nav-links">
+        <a href="{% url 'logout_view' %}" class="logout-btn">
+          <i class="bx bx-log-out"></i> Logout
+        </a>
+      </div>
+    </div>
+
+    {% if messages %}
+    <div class="messages">
+      {% for message in messages %}
+      <div class="message {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="container">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <h3>Main Navigation</h3>
+        </div>
+        <ul class="sidebar-menu">
+          <li data-tooltip="Dashboard">
+            <a href="{% url 'dashboard' %}" {% if 'dashboard' in request.resolver_match.url_name %}class="active"{% endif %}>
+              <i class="bx bx-home-alt icon"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li data-tooltip="New Sale">
+            <a href="{% url 'sales:new_sale' %}" {% if request.resolver_match.url_name == 'new_sale' and request.resolver_match.app_name == 'sales' %}class="active"{% endif %}>
+              <i class="bx bx-file icon"></i>
+              <span>New Sale</span>
+            </a>
+          </li>
+          <li data-tooltip="Sales">
+            <a href="{% url 'sales:history' %}" {% if request.resolver_match.url_name == 'history' and request.resolver_match.app_name == 'sales' %}class="active"{% endif %}>
+              <i class="bx bx-cart icon"></i>
+              <span>Sales</span>
+            </a>
+          </li>
+          <li data-tooltip="Return">
+            <a href="">
+              <i class='bx bx-recycle icon'></i>
+              <span>Return</span>
+            </a>
+          </li>
+          <li data-tooltip="Inventory">
+            <a href="{% url 'inventory:inventory_home' %}" {% if request.resolver_match.url_name == 'inventory_home' and request.resolver_match.app_name == 'inventory' %}class="active"{% endif %}>
+              <i class="bx bx-archive icon"></i>
+              <span>Inventory</span>
+            </a>
+          </li>
+          <li data-tooltip="Products">
+            <a href="{% url 'products:product_list' %}" {% if request.resolver_match.url_name == 'product_list' and request.resolver_match.app_name == 'products' %}class="active"{% endif %}>
+              <i class="bx bx-package icon"></i>
+              <span>Products</span>
+            </a>
+          </li>
+          <li data-tooltip="Customers">
+            <a href="{% url 'customers:customers' %}" {% if request.resolver_match.url_name == 'customers' and request.resolver_match.app_name == 'customers' %}class="active"{% endif %}>
+              <i class="bx bx-group icon"></i>
+              <span>Customers</span>
+            </a>
+          </li>
+          <li data-tooltip="Delivery">
+            <a href="{% url 'delivery:delivery_home' %}" {% if request.resolver_match.url_name == 'delivery_home' and request.resolver_match.app_name == 'delivery' %}class="active"{% endif %}>
+              <i class='bx bxs-truck icon'></i>
+              <span>Delivery</span>
+            </a>
+          </li>
+          <li data-tooltip="Settings">
+            <a href="{% url 'settings:settings_home' %}" {% if request.resolver_match.url_name == 'settings_home' and request.resolver_match.app_name == 'settings' %}class="active"{% endif %}>
+              <i class="bx bx-cog icon"></i>
+              <span>Settings</span>
+            </a>
+          </li>
+        </ul>
+      </aside>
+
+      <main class="content">{% block content %} {% endblock %}</main>
+    </div>
+
+    <div class="footer" id="footer">
+      Copyright © 2025 <a href="{% url 'dashboard' %}">BeiZuri Shop</a>. All rights reserved.
+    </div>
+
+    <script src="{% static 'js/base.js' %}?v={{ STATIC_VERSION }}"></script>
+  </body>
+</html>

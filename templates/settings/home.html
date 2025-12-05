@@ -1,0 +1,110 @@
+{% extends "base.html" %} {% block title %} Settings Home | BeiZuri POS
+{% endblock %} {% load static %} {% block content %}
+<link
+  rel="stylesheet"
+  href="{% static 'css/settings/home.css' %}?v={{ STATIC_VERSION }}"
+/>
+<div class="settings-container">
+  <div class="settings-grid">
+    <a href="{% url 'settings:create_user' %}" class="setting-link">
+      <i class="bx bx-user-plus"></i>
+      <span>Create New User</span>
+    </a>
+
+    <a href="{% url 'settings:user_list' %}" class="setting-link">
+      <i class="bx bx-group"></i>
+      <span>Manage Users</span>
+    </a>
+
+    <a href="#" class="setting-link">
+      <i class="bx bx-cog"></i>
+      <span>Supervisor Configuration</span>
+    </a>
+
+    <a href="{% url 'products:add_product' %}" class="setting-link">
+      <i class="bx bx-cart-add"></i>
+      <span>Add Product</span>
+    </a>
+
+    <a href="{% url 'products:product_list' %}" class="setting-link">
+      <i class="bx bx-list-ul"></i>
+      <span>Product List</span>
+    </a>
+
+    <a href="{% url 'products:add_brand' %}" class="setting-link">
+      <i class="bx bx-purchase-tag"></i>
+      <span>Add Brand</span>
+    </a>
+
+    <a href="{% url 'products:brand_list' %}" class="setting-link">
+      <i class="bx bx-label"></i>
+      <span>Manage Brands</span>
+    </a>
+
+    <a href="{% url 'products:add_category' %}" class="setting-link">
+      <i class="bx bx-category"></i>
+      <span>Add Category</span>
+    </a>
+
+    <a href="{% url 'products:category_list' %}" class="setting-link">
+      <i class="bx bx-folder-open"></i>
+      <span>Manage Categories</span>
+    </a>
+
+    <a href="{% url 'sales:report' %}" class="setting-link">
+      <i class="bx bx-dollar-circle"></i>
+      <span>Sales Reports</span>
+    </a>
+
+    <a href="{% url 'sales:analytics' %}" class="setting-link">
+      <i class="bx bx-line-chart"></i>
+      <span>Sales Analytics</span>
+    </a>
+
+    <a href="{% url 'sales:history' %}" class="setting-link">
+      <i class="bx bx-receipt"></i>
+      <span>Sales History</span>
+    </a>
+
+    <a href="{% url 'sales:trend' %}" class="setting-link">
+      <i class="bx bx-trending-up"></i>
+      <span>Sales Trends</span>
+    </a>
+
+    <a href="{% url 'payments:payment_list' %}" class="setting-link">
+      <i class="bx bx-credit-card"></i>
+      <span>Payments</span>
+    </a>
+
+    <a href="{% url 'payments:debt_list' %}" class="setting-link">
+      <i class="bx bx-money-withdraw"></i>
+      <span>Debts</span>
+    </a>
+
+    <a href="{% url 'settings:printer_settings' %}" class="setting-link">
+      <i class="bx bx-printer"></i>
+      <span>Printer Settings</span>
+    </a>
+
+    <a href="{% url 'inventory:inventory_home' %}" class="setting-link">
+      <i class="bx bx-archive icon"></i>
+      <span>Inventory</span>
+    </a>
+
+    <a href="{% url 'products:stock_movements' %}" class="setting-link">
+      <i class="bx bx-transfer"></i>
+      <span>Stock Movements</span>
+    </a>
+
+    <a href="{% url 'inventory:low_stock_products' %}" class="setting-link">
+      <i class="bx bx-bell"></i>
+      <span>Low Stock</span>
+    </a>
+
+    <a href="#" class="setting-link">
+      <i class="bx bx-cloud"></i>
+      <span>Backup & Restore</span>
+    </a>
+  </div>
+</div>
+{% endblock %}

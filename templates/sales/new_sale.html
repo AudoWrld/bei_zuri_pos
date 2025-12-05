@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}New Sale - BeiZuri Shop{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/products/add_product.css' %}?v={{ STATIC_VERSION }}">
+<link rel="stylesheet" href="{% static 'css/sales/new_sale.css' %}?v={{ STATIC_VERSION}}">
+<div class="page-header">
+  <div class="header-content">
+    <div>
+      <h1>New Sale</h1>
+      <p class="product-sku">Choose sale type to begin</p>
+    </div>
+  </div>
+</div>
+
+<div class="product-detail">
+  <form method="post" id="saleForm">
+    {% csrf_token %}
+
+    <div class="form-section">
+      <div class="section-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2Z" stroke="#00bcd4" stroke-width="1.5"/>
+          <path d="M10 6V10L13 11.5" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M7 14H10" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <h3>Sale Type</h3>
+      </div>
+      <div class="form-content">
+        <div class="sale-type-cards">
+          <label class="sale-card" data-value="RETAIL">
+            <input type="radio" name="sale_type" value="RETAIL" required>
+            <div class="sale-card-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 7L12 3L4 7M20 7L12 11M20 7V17L12 21M12 11L4 7M12 11V21M4 7V17L12 21" stroke="#00bcd4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="sale-card-title">Retail Sale</div>
+            <div class="sale-card-description">Standard customer purchase</div>
+          </label>
+
+          <label class="sale-card" data-value="WHOLESALE">
+            <input type="radio" name="sale_type" value="WHOLESALE">
+            <div class="sale-card-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="#00bcd4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 22V12H15V22" stroke="#00bcd4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="sale-card-title">Wholesale Sale</div>
+            <div class="sale-card-description">Bulk orders for resellers</div>
+          </label>
+
+          <label class="sale-card" data-value="SPECIAL">
+            <input type="radio" name="sale_type" value="SPECIAL">
+            <div class="sale-card-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" stroke="#00bcd4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="sale-card-title">Special Sale</div>
+            <div class="sale-card-description">Custom pricing or promotional sale</div>
+          </label>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const cards = document.querySelectorAll('.sale-card');
+  const form = document.getElementById('saleForm');
+  
+  cards.forEach(card => {
+    card.addEventListener('click', function() {
+      cards.forEach(c => c.classList.remove('selected'));
+      
+      this.classList.add('selected');
+      
+      const radio = this.querySelector('input[type="radio"]');
+      radio.checked = true;
+            form.submit();
+    });
+  });
+});
+</script>
+{% endblock %}

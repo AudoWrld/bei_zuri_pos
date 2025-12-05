@@ -1,0 +1,310 @@
+{% extends 'base.html' %}
+{% block title %}Process Sale - BeiZuri Shop{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/sales/process_sale.css' %}?v={{ STATIC_VERSION }}">
+<link rel="stylesheet" href="{% static 'css/sales/printer_modal.css' %}?v={{ STATIC_VERSION }}">
+
+<div class="sale-container">
+  <div class="left-panel">
+    <div class="scanner-section">
+      <div class="scanner-input-group">
+        <input type="text" id="scannerInput" class="scanner-input" placeholder="Search products by barcode or sku" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="sale-items-wrapper">
+      <table class="sale-items-table" id="itemsTable">
+        <thead>
+          <tr>
+            <th>Product name</th>
+            <th style="text-align: center;">Quantity</th>
+            <th style="text-align: right;">Price</th>
+            <th style="text-align: right;">Amount</th>
+            <th style="width: 50px;"></th>
+          </tr>
+        </thead>
+        <tbody id="saleItemsTable">
+          {% if items %}
+            {% for item in items %}
+            <tr data-item-id="{{ item.id }}" data-product-id="{{ item.product.id }}">
+              <td class="item-name">{{ item.product.name }}</td>
+              <td class="item-qty-cell">
+                <input type="number"
+                       class="qty-input"
+                       value="{{ item.quantity }}"
+                       min="1"
+                       data-item-id="{{ item.id }}"
+                       data-unit-price="{{ item.unit_price }}"
+                       data-original-value="{{ item.quantity }}"
+                       data-product-name="{{ item.product.name }}">
+              </td>
+              <td class="item-price-cell">{{ item.unit_price }}</td>
+              <td class="item-price-cell">{{ item.total_amount }}</td>
+              <td style="text-align: center;">
+                <button type="button" class="btn-remove" onclick="removeItem({{ item.id }})">
+                  <i class='bx bx-x'></i>
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr id="emptyCartRow">
+              <td colspan="5">
+                <div class="empty-cart">
+                  <i class='bx bx-cart'></i>
+                  <p>No items</p>
+                  <p style="font-size: 13px; color: #868e96;">Add products to receipt using barcode or sku.</p>
+                </div>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="control-panel">
+      <div class="payment-methods">
+        <button class="payment-btn active" data-payment="Cash">
+          <i class='bx bx-money'></i>
+          <span>Cash</span>
+        </button>
+        <button class="payment-btn" data-payment="M-Pesa">
+          <i class='bx bx-mobile'></i>
+          <span>MPESA</span>
+        </button>
+        <button class="payment-btn" data-payment="PayBill">
+          <i class='bx bx-credit-card-front'></i>
+          <span>Paybill</span>
+        </button>
+        <button class="payment-btn" data-payment="Debt">
+          <i class='bx bx-credit-card'></i>
+          <span>Debt</span>
+        </button>
+      </div>
+
+      <div class="action-buttons">
+        <button class="btn-action btn-save" onclick="completeSale()" id="completeSaleBtn" {% if not items %}disabled{% endif %}>
+          <i class='bx bx-check'></i>
+          Complete Sale
+        </button>
+        <button class="btn-action btn-new-sale" onclick="cancelSale()">
+          <i class='bx bx-plus-circle'></i>
+          New Sale
+        </button>
+      </div>
+
+      <div class="printer-status-box">
+        <div class="printer-indicator disconnected"></div>
+        <div class="printer-status-text">
+          <i class='bx bx-printer'></i>
+          <span>Printer Status</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="sale-info">
+      <div class="sale-header">
+      <h2>Current Sale</h2>
+      <div class="sale-number">{{ sale.sale_number }} - {{ sale.get_sale_type_display }}</div>
+    </div>
+
+    <div class="sale-summary">
+      <div class="summary-row">
+        <span class="summary-label">Subtotal</span>
+        <span class="summary-value" id="subtotalValue">{{ subtotal|floatformat:2 }}</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">Discount</span>
+        <span class="summary-value" id="discountValue">0.00</span>
+      </div>
+      <div class="summary-row total">
+        <span class="summary-label">Total</span>
+        <span class="summary-value" id="totalValue">{{ total|floatformat:2 }}</span>
+      </div>
+    </div>
+
+    <div class="sale-footer" style="padding: 15px; background: #f8f9fa; border-top: 1px solid #e0e0e0; font-size: 12px; color: #6c757d;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span>Cashier: {{ sale.cashier.get_full_name }}</span>
+        <span>Time: <span id="currentTime"></span></span>
+        </div>
+      </div>
+      <div class="pos-features">
+        <div class="icon-grid">
+          <button class="pos-icon" id="deliveryBtn">
+              <i class='bx bxs-truck'></i>
+              <span>Assign For Delivery</span>
+          </button>
+          
+          <button class="pos-icon" id="holdBtn" onclick="holdSale()">
+            <i class='bx bx-pause'></i>
+            <span>Hold</span>
+          </button>
+
+          <button class="pos-icon" id="recallBtn" onclick="recallSale()">
+            <i class='bx bx-refresh'></i>
+            <span>Recall</span>
+          </button>
+
+          <button class="pos-icon" id="switchCashierBtn">
+            <i class='bx bx-transfer'></i>
+            <span>Switch Cashier</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="messages-container"></div>
+
+<div id="completeSaleModal" class="completion-modal">
+  <div class="completion-modal-content">
+    <div class="completion-modal-header">
+      <h2 id="completionModalTitle">Complete Sale</h2>
+      <span class="completion-close" onclick="closeModal()">&times;</span>
+    </div>
+    <div class="completion-modal-body">
+      <form id="completeSaleForm" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="complete_sale">
+        <input type="hidden" name="payment_method" id="payment_method_hidden" value="Cash">
+        <div id="paymentFields">
+        </div>
+        <div class="completion-modal-actions">
+          <button type="submit" class="btn-primary">Complete</button>
+          <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="paymentCheckModal" class="modal-payment-overlay">
+   <div class="modal-payment-content">
+     <div class="modal-payment-header">
+       <div class="modal-payment-title">
+         <i class='bx bx-mobile'></i>
+         <span>M-PESA Payment</span>
+       </div>
+     </div>
+     <div class="modal-payment-body">
+       <div class="payment-animation">
+         <i class='bx bx-mobile payment-icon-large'></i>
+       </div>
+       <div class="payment-status" id="paymentCheckStatus">Initiating payment...</div>
+       <div class="payment-message" id="paymentCheckMessage">Please wait</div>
+       <div class="payment-actions" id="paymentActions">
+         <button class="payment-retry-btn" onclick="retryPayment()" id="retryBtn">
+           <i class='bx bx-refresh'></i>
+           Retry Payment
+         </button>
+         <button class="payment-close-btn" onclick="closePaymentModal()" id="closeBtn">
+           <i class='bx bx-x'></i>
+           Close
+         </button>
+       </div>
+     </div>
+   </div>
+ </div>
+
+ <div id="paybillConfirmModal" class="modal-payment-overlay">
+   <div class="modal-payment-content">
+     <div class="modal-payment-header">
+       <div class="modal-payment-title">
+         <i class='bx bx-credit-card-front'></i>
+         <span>PayBill Payment Confirmation</span>
+       </div>
+     </div>
+     <div class="modal-payment-body">
+       <div class="payment-animation">
+         <i class='bx bx-check-circle payment-icon-large'></i>
+       </div>
+       <div class="payment-status" id="paybillConfirmStatus">Confirm Payment</div>
+       <div class="payment-message" id="paybillConfirmMessage">Has the PayBill payment been received?</div>
+       <div class="payment-actions visible" id="paybillActions">
+         <button class="payment-retry-btn" onclick="confirmPaybillPayment()">
+           Yes
+         </button>
+         <button class="payment-close-btn" onclick="closePaybillModal()">
+           No
+         </button>
+       </div>
+     </div>
+   </div>
+ </div>
+
+<div id="printerModal" class="modal-overlay">
+   <div class="modal-content">
+     <div class="modal-header">
+       <div class="modal-title">
+         <i class='bx bx-printer'></i>
+         <span>Printing Receipt</span>
+       </div>
+     </div>
+     <div class="modal-body">
+       <div class="test-animation">
+         <i class='bx bx-printer printer-icon-large'></i>
+       </div>
+       <div class="test-status" id="printerStatus">Sending print request...</div>
+       <div class="test-message" id="printerMessage">Please wait while we print your receipt</div>
+     </div>
+   </div>
+ </div>
+
+ <div id="deliveryModal" class="modal-overlay">
+   <div class="modal-content" style="max-width: 600px;">
+     <div class="modal-header">
+       <div class="modal-title">
+         <i class='bx bxs-truck'></i>
+         <span>Assign Delivery</span>
+       </div>
+       <span class="close" onclick="closeDeliveryModal()">&times;</span>
+     </div>
+     <div class="modal-body">
+       <div class="delivery-search-section">
+         <div class="search-input-group">
+           <input type="text" id="deliverySearch" class="search-input" placeholder="Search delivery guys by username or phone..." autocomplete="off">
+           <i class='bx bx-search search-icon'></i>
+         </div>
+       </div>
+
+       <div class="delivery-guys-list" id="deliveryGuysList">
+         <!-- Delivery guys will be loaded here -->
+       </div>
+
+       <div class="delivery-form-section" style="margin-top: 20px; display: none;" id="deliveryFormSection">
+         <h4>Delivery Details</h4>
+         <form id="deliveryForm">
+           {% csrf_token %}
+           <input type="hidden" name="action" value="assign_delivery">
+           <input type="hidden" name="delivery_guy_id" id="selectedDeliveryGuyId">
+
+           <div class="form-group">
+             <label for="deliveryAddress">Delivery Address *</label>
+             <textarea id="deliveryAddress" name="delivery_address" rows="3" required placeholder="Enter delivery address"></textarea>
+           </div>
+
+           <div class="form-group">
+             <label for="deliveryNotes">Notes (Optional)</label>
+             <textarea id="deliveryNotes" name="notes" rows="2" placeholder="Any special instructions..."></textarea>
+           </div>
+         </form>
+       </div>
+     </div>
+     <div class="modal-footer">
+       <button type="button" class="btn-secondary" onclick="closeDeliveryModal()">Cancel</button>
+       <button type="button" class="btn-primary" id="assignDeliveryBtn" disabled onclick="assignDelivery()">Assign Delivery</button>
+     </div>
+   </div>
+ </div>
+
+<script src="{% static 'js/sales/process_sale.js' %}?v={{ STATIC_VERSION }}"></script>
+<script>
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+let isHeld = {% if is_held %}true{% else %}false{% endif %};
+</script>
+{% endblock %}

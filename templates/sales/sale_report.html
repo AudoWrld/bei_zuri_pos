@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Sales Report | BeiZuri POS{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/sales/sale_report.css' %}?v={{ STATIC_VERSION }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<div class="report-container">
+    <div class="report-header">
+        <h1><i class='bx bx-file'></i> Sales Report</h1>
+    </div>
+
+    <div class="filter-section">
+        <h2><i class='bx bx-filter'></i>Filters</h2>
+        <form method="get" action="{% url 'sales:report' %}">
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label for="start_date">From:</label>
+                    <input type="text" id="start_date" name="start_date" value="{{ filters.start_date }}" class="date-input" placeholder="Select start date">
+                </div>
+                <div class="filter-group">
+                    <label for="end_date">To:</label>
+                    <input type="text" id="end_date" name="end_date" value="{{ filters.end_date }}" class="date-input" placeholder="Select end date">
+                </div>
+                <div class="filter-group">
+                    <label for="sale_type">Sale Type</label>
+                    <select id="sale_type" name="sale_type">
+                        <option value="">All Types</option>
+                        <option value="RETAIL" {% if filters.sale_type == 'RETAIL' %}selected{% endif %}>Retail</option>
+                        <option value="WHOLESALE" {% if filters.sale_type == 'WHOLESALE' %}selected{% endif %}>Wholesale</option>
+                        <option value="SPECIAL" {% if filters.sale_type == 'SPECIAL' %}selected{% endif %}>Special</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="cashier">Cashier</label>
+                    <select id="cashier" name="cashier">
+                        <option value="">All Cashiers</option>
+                        {% for c in cashiers %}
+                        <option value="{{ c.id }}" {% if filters.cashier == c.id|stringformat:"s" %}selected{% endif %}>
+                            {{ c.get_full_name|default:c.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class='bx bx-search'></i>
+                    Apply Filters
+                </button>
+                <a href="{% url 'sales:report' %}" class="btn btn-secondary">
+                    <i class='bx bx-reset'></i>
+                    Reset
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="summary-section">
+        <h2><i class='bx bx-chart'></i>Summary</h2>
+        <div class="summary-grid">
+            <div class="summary-item success">
+                <div class="summary-label">Total Sales</div>
+                <div class="summary-value">KSh {{ summary.total_sales|default:0|floatformat:2 }}</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Total Transactions</div>
+                <div class="summary-value">{{ summary.total_count|default:0 }}</div>
+            </div>
+            <div class="summary-item warning">
+                <div class="summary-label">Average Sale</div>
+                <div class="summary-value">KSh {{ summary.avg_sale|default:0|floatformat:2 }}</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Total Discounts</div>
+                <div class="summary-value">KSh {{ summary.total_discount|default:0|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sales-table-section">
+        <h2><i class='bx bx-list-ul'></i>Sales Transactions</h2>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Sale Number</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Cashier</th>
+                        <th>Items</th>
+                        <th>Amount</th>
+                        <th>Discount</th>
+                        <th>Final Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in page_obj %}
+                    <tr>
+                        <td>{{ sale.sale_number }}</td>
+                        <td>{{ sale.completed_at|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            <span class="type-badge {{ sale.sale_type|lower }}">
+                                {{ sale.get_sale_type_display }}
+                            </span>
+                        </td>
+                        <td>{{ sale.cashier.get_full_name|default:sale.cashier.username }}</td>
+                        <td>{{ sale.items.count }}</td>
+                        <td>KSh {{ sale.total_amount|floatformat:2 }}</td>
+                        <td>KSh {{ sale.discount_amount|floatformat:2 }}</td>
+                        <td><strong>KSh {{ sale.final_amount|floatformat:2 }}</strong></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 40px; color: #7f8c8d;">
+                            No sales found matching the criteria
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="8">
+                            <div class="pagination">
+                                {% if page_obj.has_previous %}
+                                    <a href="?page=1{% if filters.start_date %}&start_date={{ filters.start_date }}{% endif %}{% if filters.end_date %}&end_date={{ filters.end_date }}{% endif %}{% if filters.sale_type %}&sale_type={{ filters.sale_type }}{% endif %}{% if filters.cashier %}&cashier={{ filters.cashier }}{% endif %}"><i class='bx bx-chevrons-left'></i></a>
+                                    <a href="?page={{ page_obj.previous_page_number }}{% if filters.start_date %}&start_date={{ filters.start_date }}{% endif %}{% if filters.end_date %}&end_date={{ filters.end_date }}{% endif %}{% if filters.sale_type %}&sale_type={{ filters.sale_type }}{% endif %}{% if filters.cashier %}&cashier={{ filters.cashier }}{% endif %}"><i class='bx bx-chevron-left'></i></a>
+                                {% else %}
+                                    <span class="disabled"><i class='bx bx-chevrons-left'></i></span>
+                                    <span class="disabled"><i class='bx bx-chevron-left'></i></span>
+                                {% endif %}
+                                <span class="current-page">{{ page_obj.number }}</span>
+                                {% if page_obj.has_next %}
+                                    <a href="?page={{ page_obj.next_page_number }}{% if filters.start_date %}&start_date={{ filters.start_date }}{% endif %}{% if filters.end_date %}&end_date={{ filters.end_date }}{% endif %}{% if filters.sale_type %}&sale_type={{ filters.sale_type }}{% endif %}{% if filters.cashier %}&cashier={{ filters.cashier }}{% endif %}"><i class='bx bx-chevron-right'></i></a>
+                                    <a href="?page={{ page_obj.paginator.num_pages }}{% if filters.start_date %}&start_date={{ filters.start_date }}{% endif %}{% if filters.end_date %}&end_date={{ filters.end_date }}{% endif %}{% if filters.sale_type %}&sale_type={{ filters.sale_type }}{% endif %}{% if filters.cashier %}&cashier={{ filters.cashier }}{% endif %}"><i class='bx bx-chevrons-right'></i></a>
+                                {% else %}
+                                    <span class="disabled"><i class='bx bx-chevron-right'></i></span>
+                                    <span class="disabled"><i class='bx bx-chevrons-right'></i></span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  flatpickr("#start_date", {
+    dateFormat: "Y-m-d",
+    maxDate: "today",
+    onChange: function(selectedDates, dateStr, instance) {
+      const endDatePicker = document.querySelector("#end_date")._flatpickr;
+      if (endDatePicker) {
+        endDatePicker.set('minDate', dateStr);
+      }
+    }
+  });
+
+  flatpickr("#end_date", {
+    dateFormat: "Y-m-d",
+    maxDate: "today",
+    minDate: document.getElementById('start_date').value || null
+  });
+});
+</script>
+
+{% endblock %}

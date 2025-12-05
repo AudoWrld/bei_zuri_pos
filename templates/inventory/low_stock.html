@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% block title %}BeiZuri Shop - Low Stock Products{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/products/product_list.css' %}?v={{ STATIC_VERSION }}">
+
+<div class="page-header">
+  <h1>Low Stock Products</h1>
+  <div class="header-actions">
+    <a href="{% url 'inventory:inventory_home' %}" class="btn btn-secondary">Back to Inventory</a>
+    <a href="{% url 'products:add_product' %}" class="btn btn-primary">New Product</a>
+  </div>
+</div>
+
+
+<div class="table-container">
+  <table class="data-table" id="productTable">
+    <thead>
+      <tr>
+        <th>
+          <a href="?sort={% if current_sort == 'name' %}-name{% else %}name{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Product Name
+            {% if current_sort == 'name' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-name' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'sku' %}-sku{% else %}sku{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            SKU
+            {% if current_sort == 'sku' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-sku' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'category__name' %}-category__name{% else %}category__name{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Category
+            {% if current_sort == 'category__name' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-category__name' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'brand__name' %}-brand__name{% else %}brand__name{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Brand
+            {% if current_sort == 'brand__name' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-brand__name' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'quantity' %}-quantity{% else %}quantity{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Current Stock
+            {% if current_sort == 'quantity' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-quantity' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'low_stock_threshold' %}-low_stock_threshold{% else %}low_stock_threshold{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Threshold
+            {% if current_sort == 'low_stock_threshold' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-low_stock_threshold' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'cost_price' %}-cost_price{% else %}cost_price{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Cost Price (KSh)
+            {% if current_sort == 'cost_price' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-cost_price' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'selling_price' %}-selling_price{% else %}selling_price{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" class="sort-link">
+            Selling Price (KSh)
+            {% if current_sort == 'selling_price' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-selling_price' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for product in page_obj %}
+      <tr>
+        <td><div class="text-truncate">{{ product.name }}</div></td>
+        <td><div class="text-truncate">{{ product.sku }}</div></td>
+        <td><div class="text-truncate">{{ product.category }}</div></td>
+        <td><div class="text-truncate">{{ product.brand }}</div></td>
+        <td>
+          {% if product.quantity == 0 %}
+            <span class="badge bg-danger">{{ product.quantity }}</span>
+          {% else %}
+            <span class="badge bg-warning">{{ product.quantity }}</span>
+          {% endif %}
+        </td>
+        <td>{{ product.low_stock_threshold }}</td>
+        <td>{{ product.cost_price }}</td>
+        <td>{{ product.selling_price }}</td>
+        <td>
+          {% if product.quantity == 0 %}
+            <span class="badge bg-danger">Out of Stock</span>
+          {% else %}
+            <span class="badge bg-warning">Low Stock</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="action-links">
+            <a href="{% url 'products:product_detail' product.slug %}" class="action-link">View</a> |
+            {% if request.user.can_edit_products %}<a href="{% url 'products:update_product' product.slug %}" class="action-link">Update</a> |{% endif %}
+            <a class="action-link" onclick="openAddStockModal({{ product.pk }}, '{{ product.name }}')" style="cursor: pointer;">Add Stock</a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td colspan="11">
+          <div class="pagination">
+            {% if page_obj.has_previous %}
+              <a href="?page=1{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevrons-left'></i></a>
+              <a href="?page={{ page_obj.previous_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevron-left'></i></a>
+            {% else %}
+              <span class="disabled"><i class='bx bx-chevrons-left'></i></span>
+              <span class="disabled"><i class='bx bx-chevron-left'></i></span>
+            {% endif %}
+            <span class="current-page">{{ page_obj.number }}</span>
+            {% if page_obj.has_next %}
+              <a href="?page={{ page_obj.next_page_number }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevron-right'></i></a>
+              <a href="?page={{ page_obj.paginator.num_pages }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}"><i class='bx bx-chevrons-right'></i></a>
+            {% else %}
+              <span class="disabled"><i class='bx bx-chevron-right'></i></span>
+              <span class="disabled"><i class='bx bx-chevrons-right'></i></span>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+{% if not page_obj %}
+<div class="no-results">
+  <p>No low stock products found for the selected criteria.</p>
+</div>
+{% endif %}
+
+<script>
+function openAddStockModal(productId, productName) {
+  document.getElementById('modalProductName').textContent = productName;
+  document.getElementById('addStockForm').action = `/products/add_stock/${productId}/`;
+  document.getElementById('addStockModal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAddStockModal() {
+  document.getElementById('addStockModal').style.display = 'none';
+  document.body.style.overflow = 'none';
+}
+
+window.onclick = function(event) {
+  const modal = document.getElementById('addStockModal');
+  if (event.target == modal) {
+    closeAddStockModal();
+  }
+}
+
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    closeAddStockModal();
+  }
+});
+</script>
+
+<div id="addStockModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Add Stock to <span id="modalProductName"></span></h2>
+      <span class="close" onclick="closeAddStockModal()">&times;</span>
+    </div>
+    <form id="addStockForm" method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="quantity">Quantity to Add:</label>
+        <input type="number" id="quantity" name="quantity" min="1" required>
+      </div>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary">Add Stock</button>
+        <button type="button" class="btn btn-secondary" onclick="closeAddStockModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Sales Trend | BeiZuri POS{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/sales/sale_trend.css' %}?v={{ STATIC_VERSION }}">
+
+<div class="trend-container">
+    <div class="trend-header">
+        <h1><i class='bx bx-trending-up'></i> Sales Trend Analysis</h1>
+    </div>
+
+    <div class="trend-controls">
+        <label for="days_select">Time Period:</label>
+        <select id="days_select" onchange="updateTrend()">
+            <option value="7" {% if days_back == 7 %}selected{% endif %}>Last 7 Days</option>
+            <option value="14" {% if days_back == 14 %}selected{% endif %}>Last 14 Days</option>
+            <option value="30" {% if days_back == 30 %}selected{% endif %}>Last 30 Days</option>
+            <option value="60" {% if days_back == 60 %}selected{% endif %}>Last 60 Days</option>
+            <option value="90" {% if days_back == 90 %}selected{% endif %}>Last 90 Days</option>
+        </select>
+        <button onclick="updateTrend()">
+            <i class='bx bx-refresh'></i>
+            Update
+        </button>
+    </div>
+
+    <div class="chart-section">
+        <h2><i class='bx bx-line-chart'></i>Daily Sales Trend</h2>
+        <div class="chart-container">
+            <canvas id="dailyTrendChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-section">
+        <h2><i class='bx bx-bar-chart-square'></i>Sales by Hour of Day</h2>
+        <div class="chart-container">
+            <canvas id="hourlyTrendChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-section">
+        <h2><i class='bx bx-pie-chart-alt'></i>Sales Distribution by Type</h2>
+        <div class="chart-container">
+            <canvas id="typeTrendChart"></canvas>
+        </div>
+    </div>
+
+    <div class="insights-grid">
+        <div class="insight-card success">
+            <div class="insight-header">
+                <span class="insight-title">Peak Sales Day</span>
+                <i class='bx bx-calendar-star insight-icon'></i>
+            </div>
+            <div class="insight-value" id="peakDay">-</div>
+            <div class="insight-description">Day with highest revenue</div>
+        </div>
+
+        <div class="insight-card warning">
+            <div class="insight-header">
+                <span class="insight-title">Peak Hour</span>
+                <i class='bx bx-time-five insight-icon'></i>
+            </div>
+            <div class="insight-value" id="peakHour">-</div>
+            <div class="insight-description">Most active selling hour</div>
+        </div>
+
+        <div class="insight-card info">
+            <div class="insight-header">
+                <span class="insight-title">Growth Trend</span>
+                <i class='bx bx-trending-up insight-icon'></i>
+            </div>
+            <div class="insight-value" id="growthTrend">-</div>
+            <div class="insight-description">Compared to previous period</div>
+        </div>
+
+        <div class="insight-card">
+            <div class="insight-header">
+                <span class="insight-title">Avg Daily Sales</span>
+                <i class='bx bx-dollar insight-icon'></i>
+            </div>
+            <div class="insight-value" id="avgDaily">-</div>
+            <div class="insight-description">Average per day in period</div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const dailyTrendData = {{ daily_trend|safe }};
+const hourlyTrendData = {{ hourly_trend|safe }};
+const typeTrendData = {{ type_trend|safe }};
+
+const dailyLabels = dailyTrendData.map(item => item.day);
+const dailyTotals = dailyTrendData.map(item => parseFloat(item.total || 0));
+const dailyCounts = dailyTrendData.map(item => item.count || 0);
+
+const ctx1 = document.getElementById('dailyTrendChart').getContext('2d');
+new Chart(ctx1, {
+    type: 'line',
+    data: {
+        labels: dailyLabels,
+        datasets: [{
+            label: 'Revenue (KSh)',
+            data: dailyTotals,
+            backgroundColor: 'rgba(52, 152, 219, 0.2)',
+            borderColor: '#3498db',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 5,
+            pointBackgroundColor: '#3498db',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointHoverRadius: 7,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top',
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'KSh ' + context.parsed.y.toLocaleString();
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return 'KSh ' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+const hourlyLabels = hourlyTrendData.map(item => item.hour + ':00');
+const hourlyTotals = hourlyTrendData.map(item => parseFloat(item.total || 0));
+
+const ctx2 = document.getElementById('hourlyTrendChart').getContext('2d');
+new Chart(ctx2, {
+    type: 'bar',
+    data: {
+        labels: hourlyLabels,
+        datasets: [{
+            label: 'Revenue (KSh)',
+            data: hourlyTotals,
+            backgroundColor: 'rgba(39, 174, 96, 0.8)',
+            borderColor: '#27ae60',
+            borderWidth: 2,
+            borderRadius: 8,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top',
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'KSh ' + context.parsed.y.toLocaleString();
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return 'KSh ' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+const typeLabels = typeTrendData.map(item => item.sale_type);
+const typeTotals = typeTrendData.map(item => parseFloat(item.total || 0));
+
+const ctx3 = document.getElementById('typeTrendChart').getContext('2d');
+new Chart(ctx3, {
+    type: 'polarArea',
+    data: {
+        labels: typeLabels,
+        datasets: [{
+            data: typeTotals,
+            backgroundColor: [
+                'rgba(52, 152, 219, 0.7)',
+                'rgba(39, 174, 96, 0.7)',
+                'rgba(243, 156, 18, 0.7)',
+            ],
+            borderColor: [
+                '#3498db',
+                '#27ae60',
+                '#f39c12',
+            ],
+            borderWidth: 2,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'right',
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.label + ': KSh ' + context.parsed.r.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+if (dailyTotals.length > 0) {
+    const maxDaily = Math.max(...dailyTotals);
+    const maxDayIndex = dailyTotals.indexOf(maxDaily);
+    document.getElementById('peakDay').textContent = dailyLabels[maxDayIndex];
+}
+
+if (hourlyTotals.length > 0) {
+    const maxHourly = Math.max(...hourlyTotals);
+    const maxHourIndex = hourlyTotals.indexOf(maxHourly);
+    document.getElementById('peakHour').textContent = hourlyLabels[maxHourIndex];
+}
+
+if (dailyTotals.length > 0) {
+    const avgDaily = dailyTotals.reduce((a, b) => a + b, 0) / dailyTotals.length;
+    document.getElementById('avgDaily').textContent = 'KSh ' + avgDaily.toLocaleString(undefined, {maximumFractionDigits: 2});
+}
+
+if (dailyTotals.length > 1) {
+    const recent = dailyTotals.slice(-Math.floor(dailyTotals.length / 2));
+    const older = dailyTotals.slice(0, Math.floor(dailyTotals.length / 2));
+    const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+    const olderAvg = older.reduce((a, b) => a + b, 0) / older.length;
+    const growth = ((recentAvg - olderAvg) / olderAvg * 100).toFixed(1);
+    document.getElementById('growthTrend').textContent = (growth > 0 ? '+' : '') + growth + '%';
+}
+
+function updateTrend() {
+    const days = document.getElementById('days_select').value;
+    window.location.href = '{% url "sales:trend" %}?days=' + days;
+}
+</script>
+
+{% endblock %}

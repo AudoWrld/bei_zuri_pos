@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receipt</title>
+  <style>
+body {
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  background: #f5f5f5;
+  font-family: 'Courier New', monospace;
+  box-sizing: border-box;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 700px;
+}
+
+.print-button a {
+  display: inline-block;
+  padding: 10px 20px;
+  background: #00bcd4;
+  color: white;
+  text-decoration: none;
+  border-radius: 3px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+}
+
+.print-button a:hover {
+  background: #00acc1;
+}
+
+.receipt {
+  width: 100%;
+  background: white;
+  padding: 30px;
+  border: 1px solid #ddd;
+  font-size: 13px;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.receipt-header {
+  text-align: center;
+  border-bottom: 1px dashed #000;
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+}
+
+.receipt-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.receipt-address {
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+
+.receipt-info {
+  margin-bottom: 15px;
+}
+
+.receipt-info div {
+  margin-bottom: 5px;
+}
+
+.receipt-items {
+  margin-bottom: 20px;
+}
+
+.receipt-items-header {
+  border-bottom: 1px dashed #000;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  font-weight: bold;
+}
+
+.receipt-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 3px 0;
+}
+
+.receipt-item-name {
+  flex: 1;
+  margin-right: 15px;
+}
+
+.receipt-item-qty {
+  width: 50px;
+  text-align: center;
+}
+
+.receipt-item-price {
+  width: 100px;
+  text-align: right;
+}
+
+.receipt-item-total {
+  width: 100px;
+  text-align: right;
+}
+
+.receipt-totals {
+  border-top: 1px dashed #000;
+  padding-top: 15px;
+}
+
+.receipt-total-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.receipt-footer {
+  text-align: center;
+  border-top: 1px dashed #000;
+  padding-top: 15px;
+  margin-top: 20px;
+  font-size: 11px;
+}
+
+@media print {
+  body {
+    background: white;
+    padding: 0;
+  }
+  .print-button {
+    display: none;
+  }
+  .container {
+    min-height: auto;
+  }
+  .receipt {
+    box-shadow: none;
+    border: none;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    padding: 15px;
+  }
+  .receipt {
+    padding: 20px;
+  }
+}
+  </style>
+</head>
+<body>
+  
+<div class="container">
+  <div class="print-button">
+    <button onclick="window.print()" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; margin-right: 10px;">Print Receipt</button>
+    <a href="{% url 'sales:download_receipt' receipt_data.sale_number %}">Download PDF</a>
+  </div>
+
+  <div class="receipt">
+    <div class="receipt-header">
+      <div class="receipt-title">{{ receipt_data.shop_name }}</div>
+      <div class="receipt-address">{{ receipt_data.address }}</div>
+      <div class="receipt-address">{{ receipt_data.phone }}</div>
+    </div>
+
+    <div class="receipt-info">
+      <div><strong>Sale #:</strong> {{ receipt_data.sale_number }}</div>
+      <div><strong>Date:</strong> {{ receipt_data.date }}</div>
+      <div><strong>Type:</strong> {{ receipt_data.sale_type }}</div>
+      <div><strong>Cashier:</strong> {{ receipt_data.cashier }}</div>
+      <div><strong>Payment:</strong> {{ receipt_data.payment_method }}</div>
+    </div>
+
+    <div class="receipt-items">
+      <div class="receipt-items-header">
+        <div style="display: flex; justify-content: space-between;">
+          <span style="flex: 1;">Item</span>
+          <span style="width: 50px; text-align: center;">Qty</span>
+          <span style="width: 100px; text-align: right;">Price</span>
+          <span style="width: 100px; text-align: right;">Total</span>
+        </div>
+      </div>
+      {% for item in receipt_data.items %}
+      <div class="receipt-item">
+        <div class="receipt-item-name">{{ item.name }}</div>
+        <div class="receipt-item-qty">{{ item.quantity }}</div>
+        <div class="receipt-item-price">{{ item.unit_price }}</div>
+        <div class="receipt-item-total">{{ item.total }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="receipt-totals">
+      <div class="receipt-total-row">
+        <span>Subtotal:</span>
+        <span>{{ receipt_data.subtotal }}</span>
+      </div>
+      {% if receipt_data.special_amount and receipt_data.special_amount != '0.00' %}
+      <div class="receipt-total-row">
+        <span>Special Discount:</span>
+        <span>-{{ receipt_data.special_amount }}</span>
+      </div>
+      {% endif %}
+      {% if receipt_data.discount_amount and receipt_data.discount_amount != '0.00' %}
+      <div class="receipt-total-row">
+        <span>Discount:</span>
+        <span>-{{ receipt_data.discount_amount }}</span>
+      </div>
+      {% endif %}
+      <div class="receipt-total-row" style="border-top: 1px solid #000; padding-top: 8px; margin-top: 8px; font-weight: bold; font-size: 16px;">
+        <span>TOTAL:</span>
+        <span>{{ receipt_data.total }}</span>
+      </div>
+      {% if receipt_data.payment_method == 'Cash' %}
+      {% if receipt_data.money_received %}
+      <div class="receipt-total-row">
+        <span>Paid:</span>
+        <span>{{ receipt_data.money_received }}</span>
+      </div>
+      {% endif %}
+      {% if receipt_data.change_amount and receipt_data.change_amount != '0.00' %}
+      <div class="receipt-total-row">
+        <span>Change:</span>
+        <span>{{ receipt_data.change_amount }}</span>
+      </div>
+      {% endif %}
+      {% endif %}
+    </div>
+
+    <div class="receipt-footer">
+      <div>Thank you for your purchase!</div>
+      <div>Please come again</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

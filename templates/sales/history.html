@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+{% block title %}Sales History - BeiZuri Shop{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/products/product_list.css' %}?v={{ STATIC_VERSION }}">
+<link rel="stylesheet" href="{% static 'css/sales/sales_history.css' %}?v={{ STATIC_VERSION }}">
+<link rel="stylesheet" href="{% static 'css/sales/printer_modal.css' %}?v={{ STATIC_VERSION }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<div class="page-header">
+  <h1>Sales History</h1>
+  <div class="header-actions">
+    <a href="{% url 'sales:new_sale' %}" class="btn btn-primary">New Sale</a>
+  </div>
+</div>
+
+<div class="filter-container">
+  <form method="get" class="filter-form">
+    <div class="filter-group">
+      <label for="search">Search:</label>
+      <input type="text" id="search" name="search" value="{{ search_query }}" placeholder="Search sales..." class="search-input">
+    </div>
+    <div class="filter-group">
+      <label for="start_date">From:</label>
+      <input type="text" id="start_date" name="start_date" value="{{ start_date }}" class="date-input" placeholder="Select start date">
+    </div>
+    <div class="filter-group">
+      <label for="end_date">To:</label>
+      <input type="text" id="end_date" name="end_date" value="{{ end_date }}" class="date-input" placeholder="Select end date">
+    </div>
+    <div class="filter-group">
+      <button type="submit" class="btn btn-primary filter-btn">Filter</button>
+    </div>
+  </form>
+</div>
+
+<div class="table-container">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>
+          <a href="?sort={% if current_sort == 'sale_number' %}-sale_number{% else %}sale_number{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}" class="sort-link">
+            Sale Number
+            {% if current_sort == 'sale_number' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-sale_number' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'sale_type' %}-sale_type{% else %}sale_type{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}" class="sort-link">
+            Type
+            {% if current_sort == 'sale_type' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-sale_type' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'cashier__username' %}-cashier__username{% else %}cashier__username{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}" class="sort-link">
+            Cashier
+            {% if current_sort == 'cashier__username' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-cashier__username' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>Items</th>
+        <th>
+          <a href="?sort={% if current_sort == 'final_amount' %}-final_amount{% else %}final_amount{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}" class="sort-link">
+            Total Amount (Ksh)
+            {% if current_sort == 'final_amount' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-final_amount' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'payment_method' %}-payment_method{% else %}payment_method{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}" class="sort-link">
+            Payment
+            {% if current_sort == 'payment_method' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-payment_method' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>
+          <a href="?sort={% if current_sort == 'completed_at' %}-completed_at{% else %}completed_at{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}" class="sort-link">
+            Date
+            {% if current_sort == 'completed_at' %}<i class='bx bx-chevron-up'></i>{% elif current_sort == '-completed_at' %}<i class='bx bx-chevron-down'></i>{% endif %}
+          </a>
+        </th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sale in page_obj %}
+      <tr>
+        <td>{{ sale.sale_number }}</td>
+        <td>{{ sale.get_sale_type_display }}</td>
+        <td>{{ sale.cashier.get_full_name|default:sale.cashier.username }}</td>
+        <td>{{ sale.items.count }}</td>
+        <td>{{ sale.final_amount }}</td>
+        <td>{{ sale.payment_method }}</td>
+        <td>{{ sale.completed_at|date:"M d, Y H:i" }}</td>
+        <td>
+          <a href="{% url 'sales:sale_detail' sale.id %}" class="action-link">View</a> |
+          <a href="#" onclick="openReprintModal({{ sale.id }})" class="action-link">Re-print Receipt</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="8">
+          <div class="pagination">
+            {% if page_obj.has_previous %}
+              <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"><i class='bx bx-chevrons-left'></i></a>
+              <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"><i class='bx bx-chevron-left'></i></a>
+            {% else %}
+              <span class="disabled"><i class='bx bx-chevrons-left'></i></span>
+              <span class="disabled"><i class='bx bx-chevron-left'></i></span>
+            {% endif %}
+            <span class="current-page">{{ page_obj.number }}</span>
+            {% if page_obj.has_next %}
+              <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"><i class='bx bx-chevron-right'></i></a>
+              <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}"><i class='bx bx-chevrons-right'></i></a>
+            {% else %}
+              <span class="disabled"><i class='bx bx-chevron-right'></i></span>
+              <span class="disabled"><i class='bx bx-chevrons-right'></i></span>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+{% if not page_obj %}
+<div class="no-results">
+  <p>No sales found for the selected period.</p>
+</div>
+{% endif %}
+
+<!-- Reprint Modal -->
+<div id="reprintModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">
+        <i class='bx bx-printer'></i>
+        <span>Re-print Receipt</span>
+      </div>
+      <button class="modal-close" onclick="closeReprintModal()">
+        <i class='bx bx-x'></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="test-animation">
+        <i class='bx bx-printer printer-icon-large'></i>
+      </div>
+      <div class="test-status" id="reprintStatus">Sending reprint request...</div>
+      <div class="test-message" id="reprintMessage">Please wait while we reprint your receipt</div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+function openReprintModal(saleId) {
+  const statusEl = document.getElementById('reprintStatus');
+  const messageEl = document.getElementById('reprintMessage');
+
+  statusEl.textContent = 'Sending reprint request...';
+  statusEl.style.color = '#2c3e50';
+  messageEl.textContent = 'Please wait while we reprint your receipt';
+
+  document.getElementById('reprintModal').classList.add('active');
+  reprintReceipt(saleId);
+}
+
+function closeReprintModal() {
+  document.getElementById('reprintModal').classList.remove('active');
+}
+
+function reprintReceipt(saleId) {
+  fetch(`/sales/reprint/${saleId}/`, {
+    method: 'GET',
+    headers: {
+      'X-CSRFToken': csrftoken,
+      'Content-Type': 'application/json',
+    },
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(data => {
+    const statusEl = document.getElementById('reprintStatus');
+    const messageEl = document.getElementById('reprintMessage');
+
+    if (data.success) {
+      statusEl.textContent = 'Receipt Re-printed Successfully!';
+      statusEl.style.color = '#27ae60';
+      messageEl.textContent = data.message || 'Your receipt has been reprinted';
+      document.querySelector('.printer-icon-large').style.animation = 'none';
+      setTimeout(() => {
+        closeReprintModal();
+      }, 5000);
+    } else {
+      statusEl.textContent = 'Re-print Failed';
+      statusEl.style.color = '#e74c3c';
+      messageEl.textContent = data.error || data.message || 'Unable to reprint. Please check your printer connection.';
+      document.querySelector('.printer-icon-large').style.animation = 'none';
+    }
+  })
+  .catch(error => {
+    document.getElementById('reprintStatus').textContent = 'Connection Error';
+    document.getElementById('reprintStatus').style.color = '#e74c3c';
+    document.getElementById('reprintMessage').textContent = error.message || 'Unable to connect to the server';
+  });
+}
+
+document.getElementById('reprintModal').addEventListener('click', function(e) {
+  if (e.target === this) closeReprintModal();
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeReprintModal();
+  }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  flatpickr("#start_date", {
+    dateFormat: "Y-m-d",
+    maxDate: "today",
+    onChange: function(selectedDates, dateStr, instance) {
+      const endDatePicker = document.querySelector("#end_date")._flatpickr;
+      if (endDatePicker) {
+        endDatePicker.set('minDate', dateStr);
+      }
+    }
+  });
+
+  flatpickr("#end_date", {
+    dateFormat: "Y-m-d",
+    maxDate: "today",
+    minDate: document.getElementById('start_date').value || null
+  });
+});
+</script>
+{% endblock %}
