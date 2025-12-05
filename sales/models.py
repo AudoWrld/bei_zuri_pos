@@ -23,8 +23,12 @@ class Sale(models.Model):
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     final_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     payment_method = models.CharField(max_length=50, blank=True)
-    money_received = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    change_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    money_received = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
+    change_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True
+    )
     notes = models.TextField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -66,10 +70,11 @@ class Sale(models.Model):
     def complete_sale(self):
         """Complete the sale and update inventory"""
         if self.completed_at:
-            return 
+            return  # Already completed
 
         self.completed_at = timezone.now()
 
+        # Calculate totals
         total = Decimal("0")
         special_total = Decimal("0")
 
@@ -80,6 +85,7 @@ class Sale(models.Model):
                 item_total = item.quantity * item.unit_price
             total += item_total
 
+            # Update product sold count and revenue
             item.product.sell(item.quantity)
 
         self.total_amount = total
@@ -113,4 +119,77 @@ class SaleItem(models.Model):
             )
         else:
             self.total_amount = self.quantity * self.unit_price - self.discount_amount
+        super().save(*args, **kwargs)
+
+
+class Return(models.Model):
+    return_number = models.CharField(
+        max_length=20, unique=True, editable=False, db_index=True
+    )
+    sale = models.ForeignKey(Sale, on_delete=models.CASCADE)
+    cashier = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, db_index=True
+    )
+    total_return_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["return_number"]),
+            models.Index(fields=["cashier"]),
+            models.Index(fields=["created_at"]),
+        ]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Return {self.return_number} - {self.total_return_amount}"
+
+    def save(self, *args, **kwargs):
+        if not self.return_number:
+            today = timezone.now().strftime("%Y%m%d")
+            last_return = (
+                Return.objects.filter(return_number__startswith=f"RETURN-{today}")
+                .order_by("-return_number")
+                .first()
+            )
+
+            if last_return:
+                last_number = int(last_return.return_number.split("-")[-1])
+                new_number = last_number + 1
+            else:
+                new_number = 1
+
+            self.return_number = f"RETURN-{today}-{new_number:04d}"
+
+        super().save(*args, **kwargs)
+
+
+class ReturnItem(models.Model):
+    RETURN_REASONS = [
+        ("FAULTY", "Faulty"),
+        ("PROSPECT", "Prospect"),
+    ]
+
+    return_fk = models.ForeignKey(
+        Return, on_delete=models.CASCADE, related_name="items"
+    )
+    sale_item = models.ForeignKey(SaleItem, on_delete=models.CASCADE)
+    quantity = models.IntegerField()
+    return_reason = models.CharField(max_length=10, choices=RETURN_REASONS)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.sale_item.product.name} x{self.quantity}"
+
+    def save(self, *args, **kwargs):
+        self.total_price = self.quantity * self.unit_price
         super().save(*args, **kwargs)

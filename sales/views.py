@@ -15,8 +15,9 @@ from django.utils import timezone
 from datetime import timedelta
 import json
 from django.db.models import Sum, Count, Avg, Q
-from .models import Sale, SaleItem
-from products.models import Product, Barcode
+from .models import Sale, SaleItem, Return, ReturnItem
+from products.models import Product, Barcode, StockMovement
+from .forms import ReturnStartForm, get_return_formset
 from hardware.printer_client import (
     print_receipt,
     check_printer_status,
@@ -1202,8 +1203,191 @@ def sale_trend(request):
 
 
 @login_required
+def return_start(request):
+    if not request.user.can_process_sales():
+        raise PermissionDenied("You do not have permission to process returns.")
+
+    if request.method == "POST":
+        form = ReturnStartForm(request.POST)
+        if form.is_valid():
+            sale_number = form.cleaned_data["sale_number"]
+            sale = Sale.objects.get(sale_number=sale_number)
+            return redirect("sales:return_process", sale_id=sale.id)
+    else:
+        form = ReturnStartForm()
+
+    return render(request, "sales/return_start.html", {"form": form})
+
+
+@login_required
+def return_process(request, sale_id):
+    if not request.user.can_process_sales():
+        raise PermissionDenied("You do not have permission to process returns.")
+
+    sale = get_object_or_404(Sale, id=sale_id, completed_at__isnull=False)
+    sale_items = sale.items.select_related("product").all()
+
+    if request.method == "POST":
+        return_data = []
+        total_return_amount = Decimal("0")
+        has_items = False
+
+        for key, value in request.POST.items():
+            if key.startswith("quantity_"):
+                sale_item_id = key.replace("quantity_", "")
+                quantity = int(value) if value else 0
+                if quantity > 0:
+                    reason_key = f"reason_{sale_item_id}"
+                    reason = request.POST.get(reason_key, "FAULTY")
+
+                    try:
+                        sale_item = SaleItem.objects.get(id=sale_item_id, sale=sale)
+                        if quantity > sale_item.quantity:
+                            messages.error(
+                                request,
+                                f"Cannot return more than {sale_item.quantity} units of {sale_item.product.name}",
+                            )
+                            break
+
+                        has_items = True
+                        unit_price = sale_item.unit_price
+
+                        return_data.append(
+                            {
+                                "sale_item_id": sale_item.id,
+                                "quantity": quantity,
+                                "return_reason": reason,
+                                "unit_price": str(unit_price),
+                                "total_price": str(quantity * unit_price),
+                            }
+                        )
+                        total_return_amount += quantity * unit_price
+                    except SaleItem.DoesNotExist:
+                        messages.error(request, "Invalid item selected")
+                        break
+            else:
+                continue
+        else:
+            if not has_items:
+                messages.error(request, "Please select at least one item to return.")
+            else:
+                request.session["return_data"] = {
+                    "sale_id": sale.id,
+                    "return_items": return_data,
+                    "total_return_amount": str(total_return_amount),
+                }
+                return redirect("sales:return_confirm")
+
+    return_data = request.session.get("return_data", {})
+    return_items = []
+    total_return_amount = Decimal("0")
+
+    if return_data and str(return_data.get("sale_id")) == str(sale.id):
+        for item_data in return_data.get("return_items", []):
+            sale_item = SaleItem.objects.select_related("product").get(
+                id=item_data["sale_item_id"]
+            )
+            return_items.append(
+                {
+                    "sale_item_id": sale_item.id,
+                    "product_name": sale_item.product.name,
+                    "sold_quantity": sale_item.quantity,
+                    "quantity": item_data["quantity"],
+                    "return_reason": item_data["return_reason"],
+                    "unit_price": item_data["unit_price"],
+                    "total_price": item_data["total_price"],
+                }
+            )
+            total_return_amount += Decimal(item_data["total_price"])
+
+    import json
+
+    context = {
+        "sale": sale,
+        "return_items": return_items,
+        "return_items_json": json.dumps(return_items),
+        "total_return_amount": total_return_amount,
+    }
+    return render(request, "sales/return_process.html", context)
+
+
+@login_required
+def return_confirm(request):
+    if not request.user.can_process_sales():
+        raise PermissionDenied("You do not have permission to process returns.")
+
+    return_data = request.session.get("return_data")
+    if not return_data:
+        messages.error(request, "No return data found. Please start over.")
+        return redirect("sales:return_start")
+
+    sale = get_object_or_404(Sale, id=return_data["sale_id"])
+
+    if request.method == "POST":
+        return_obj = Return.objects.create(
+            sale=sale,
+            cashier=request.user,
+            total_return_amount=Decimal(return_data["total_return_amount"]),
+            notes=request.POST.get("notes", ""),
+        )
+
+        for item_data in return_data["return_items"]:
+            sale_item = SaleItem.objects.get(id=item_data["sale_item_id"])
+            ReturnItem.objects.create(
+                return_fk=return_obj,
+                sale_item=sale_item,
+                quantity=item_data["quantity"],
+                return_reason=item_data["return_reason"],
+                unit_price=Decimal(item_data["unit_price"]),
+                total_price=Decimal(item_data["total_price"]),
+            )
+
+            product = sale_item.product
+            previous_quantity = product.quantity
+            product.quantity += item_data["quantity"]
+            product.save()
+
+            StockMovement.objects.create(
+                product=product,
+                movement_type="RETURN",
+                quantity=item_data["quantity"],
+                previous_quantity=previous_quantity,
+                new_quantity=product.quantity,
+                notes=f"Return #{return_obj.return_number} - {item_data['return_reason']}",
+            )
+
+        del request.session["return_data"]
+
+        messages.success(
+            request, f"Return {return_obj.return_number} processed successfully."
+        )
+        return redirect("sales:history") 
+
+    return_items = []
+    for item_data in return_data["return_items"]:
+        sale_item = SaleItem.objects.select_related("product").get(
+            id=item_data["sale_item_id"]
+        )
+        return_items.append(
+            {
+                "product": sale_item.product,
+                "quantity": item_data["quantity"],
+                "return_reason": item_data["return_reason"],
+                "unit_price": Decimal(item_data["unit_price"]),
+                "total_price": Decimal(item_data["total_price"]),
+            }
+        )
+
+    context = {
+        "sale": sale,
+        "return_items": return_items,
+        "total_return_amount": Decimal(return_data["total_return_amount"]),
+    }
+    return render(request, "sales/return_confirm.html", context)
+
+
+@login_required
 def get_delivery_guys(request):
-    """API endpoint to get delivery guys for assignment"""
     if not request.user.can_process_sales():
         return JsonResponse({"success": False, "error": "Permission denied"})
 
@@ -1242,3 +1426,44 @@ def get_delivery_guys(request):
         )
 
     return JsonResponse({"success": True, "delivery_guys": result})
+
+
+@login_required
+def search_sale_product(request):
+    if not request.user.can_process_sales():
+        return JsonResponse({"success": False, "error": "Permission denied"})
+
+    sale_id = request.GET.get("sale_id")
+    query = request.GET.get("query", "").strip()
+
+    if not sale_id or not query:
+        return JsonResponse({"success": False, "error": "Missing parameters"})
+
+    try:
+        sale = Sale.objects.get(id=sale_id, completed_at__isnull=False)
+        sale_items = sale.items.select_related("product").all()
+
+        matching_items = []
+        for item in sale_items:
+            product = item.product
+            if product.sku.upper() == query.upper() or any(
+                barcode.barcode.upper() == query.upper()
+                for barcode in product.barcodes.filter(is_active=True)
+            ):
+                matching_items.append(
+                    {
+                        "sale_item_id": item.id,
+                        "name": product.name,
+                        "sold_quantity": item.quantity,
+                        "unit_price": str(item.unit_price),
+                    }
+                )
+
+        return JsonResponse({"success": True, "products": matching_items})
+
+    except Sale.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Sale not found"})
+    except Exception as e:
+        logger.error(f"Error searching sale product: {str(e)}")
+        return JsonResponse({"success": False, "error": "Search failed"})
+

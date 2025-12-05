@@ -18,4 +18,10 @@ urlpatterns = [
     path("trend/", views.sale_trend, name="trend"),
     path("download/<str:sale_number>/", download_receipt, name="download_receipt"),
     path("api/delivery-guys/", views.get_delivery_guys, name="get_delivery_guys"),
+    path("return/", views.return_start, name="return_start"),
+    path("return/<int:sale_id>/", views.return_process, name="return_process"),
+    path("return/confirm/", views.return_confirm, name="return_confirm"),
+    path(
+        "return/search-product/", views.search_sale_product, name="search_sale_product"
+    ),
 ]
