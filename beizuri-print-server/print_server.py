@@ -292,7 +292,7 @@ def build_receipt(receipt_data):
     receipt.extend(LINE_FEED)
     receipt.extend(b"Thank you for your purchase!\n")
     receipt.extend(b"Please come again\n")
-    receipt.extend(b"Goods sold cannot be reaccepted\n")
+    receipt.extend(b"Goods once sold will not be re-accepted\n")
     receipt.extend(LINE_FEED)
     receipt.extend(LINE_FEED)
     receipt.extend(LINE_FEED)
