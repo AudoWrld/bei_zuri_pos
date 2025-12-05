@@ -1227,28 +1227,50 @@ def return_process(request, sale_id):
     sale = get_object_or_404(Sale, id=sale_id, completed_at__isnull=False)
     sale_items = sale.items.select_related("product").all()
 
+    sale_items_with_returns = []
+    for item in sale_items:
+        already_returned = (
+            ReturnItem.objects.filter(sale_item=item).aggregate(total=Sum("quantity"))[
+                "total"
+            ]
+            or 0
+        )
+        available = item.quantity - already_returned
+        sale_items_with_returns.append(
+            {"item": item, "already_returned": already_returned, "available": available}
+        )
+
     if request.method == "POST":
         return_data = []
         total_return_amount = Decimal("0")
         has_items = False
 
         for key, value in request.POST.items():
-            if key.startswith("quantity_"):
-                sale_item_id = key.replace("quantity_", "")
-                quantity = int(value) if value else 0
-                if quantity > 0:
-                    reason_key = f"reason_{sale_item_id}"
-                    reason = request.POST.get(reason_key, "FAULTY")
+            if key.startswith("confirm_") and value == "on":
+                sale_item_id = key.replace("confirm_", "")
+                quantity_key = f"quantity_{sale_item_id}"
+                reason_key = f"reason_{sale_item_id}"
+                quantity = int(request.POST.get(quantity_key, 1))
+                reason = request.POST.get(reason_key, "FAULTY")
 
-                    try:
-                        sale_item = SaleItem.objects.get(id=sale_item_id, sale=sale)
-                        if quantity > sale_item.quantity:
-                            messages.error(
-                                request,
-                                f"Cannot return more than {sale_item.quantity} units of {sale_item.product.name}",
-                            )
-                            break
+                try:
+                    sale_item = SaleItem.objects.get(id=sale_item_id, sale=sale)
+                    already_returned = (
+                        ReturnItem.objects.filter(sale_item=sale_item).aggregate(
+                            total=Sum("quantity")
+                        )["total"]
+                        or 0
+                    )
+                    available = sale_item.quantity - already_returned
 
+                    if quantity > available:
+                        messages.error(
+                            request,
+                            f"Cannot return more than {available} units of {sale_item.product.name} (already returned: {already_returned})",
+                        )
+                        break
+
+                    if quantity > 0:
                         has_items = True
                         unit_price = sale_item.unit_price
 
@@ -1262,11 +1284,9 @@ def return_process(request, sale_id):
                             }
                         )
                         total_return_amount += quantity * unit_price
-                    except SaleItem.DoesNotExist:
-                        messages.error(request, "Invalid item selected")
-                        break
-            else:
-                continue
+                except SaleItem.DoesNotExist:
+                    messages.error(request, "Invalid item selected")
+                    break
         else:
             if not has_items:
                 messages.error(request, "Please select at least one item to return.")
@@ -1278,32 +1298,30 @@ def return_process(request, sale_id):
                 }
                 return redirect("sales:return_confirm")
 
-    return_data = request.session.get("return_data", {})
+    request.session.pop("return_data", None)
+
     return_items = []
     total_return_amount = Decimal("0")
 
-    if return_data and str(return_data.get("sale_id")) == str(sale.id):
-        for item_data in return_data.get("return_items", []):
-            sale_item = SaleItem.objects.select_related("product").get(
-                id=item_data["sale_item_id"]
-            )
-            return_items.append(
-                {
-                    "sale_item_id": sale_item.id,
-                    "product_name": sale_item.product.name,
-                    "sold_quantity": sale_item.quantity,
-                    "quantity": item_data["quantity"],
-                    "return_reason": item_data["return_reason"],
-                    "unit_price": item_data["unit_price"],
-                    "total_price": item_data["total_price"],
-                }
-            )
-            total_return_amount += Decimal(item_data["total_price"])
-
     import json
+
+    sale_items_json = json.dumps(
+        [
+            {
+                "id": sid["item"].id,
+                "name": sid["item"].product.name,
+                "sold_quantity": sid["item"].quantity,
+                "already_returned": sid["already_returned"],
+                "available": sid["available"],
+                "unit_price": str(sid["item"].unit_price),
+            }
+            for sid in sale_items_with_returns
+        ]
+    )
 
     context = {
         "sale": sale,
+        "sale_items_json": sale_items_json,
         "return_items": return_items,
         "return_items_json": json.dumps(return_items),
         "total_return_amount": total_return_amount,
@@ -1361,7 +1379,7 @@ def return_confirm(request):
         messages.success(
             request, f"Return {return_obj.return_number} processed successfully."
         )
-        return redirect("sales:history") 
+        return redirect("sales:history")
 
     return_items = []
     for item_data in return_data["return_items"]:
@@ -1466,4 +1484,3 @@ def search_sale_product(request):
     except Exception as e:
         logger.error(f"Error searching sale product: {str(e)}")
         return JsonResponse({"success": False, "error": "Search failed"})
-

@@ -4,57 +4,32 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/sales/process_sale.css' %}?v={{ STATIC_VERSION }}">
 
-<div class="sale-container" data-return-items="{% if return_items_json %}{{ return_items_json|safe }}{% else %}[]{% endif %}">
+<div class="sale-container" data-sale-items="{{ sale_items_json|safe }}" data-return-items="{% if return_items_json %}{{ return_items_json|safe }}{% else %}[]{% endif %}">
   <div class="left-panel">
-    <div class="product-search-section" style="padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px;">
-      <h4 style="margin-bottom: 15px; color: #333;">Scan Product or Search by SKU</h4>
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <input type="text" id="productSearch" placeholder="Scan barcode or enter SKU..." style="flex: 1; padding: 10px; border: 2px solid #e0e0e0; border-radius: 4px; font-size: 16px;" autofocus>
-        <button type="button" id="searchBtn" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
-          <i class='bx bx-search'></i> Search
-        </button>
+    <div class="scanner-section">
+      <div class="scanner-input-group">
+        <input type="text" id="scannerInput" class="scanner-input" placeholder="Scan products by barcode or sku" autocomplete="off" autofocus>
       </div>
-      <div id="searchResults" style="margin-top: 10px; max-height: 200px; overflow-y: auto;"></div>
     </div>
 
     <div class="sale-items-wrapper">
       <form method="post" id="returnForm">
         {% csrf_token %}
         <table class="sale-items-table">
-          <thead>
-            <tr>
-              <th>Product name</th>
-              <th style="text-align: center;">Sold Qty</th>
-              <th style="text-align: center;">Return Qty</th>
-              <th style="text-align: center;">Reason</th>
-              <th style="text-align: right;">Unit Price</th>
-              <th style="text-align: right;">Total</th>
-              <th style="text-align: center;">Action</th>
-            </tr>
-          </thead>
+           <thead>
+             <tr>
+               <th>Product name</th>
+               <th style="text-align: center;">Sold Qty</th>
+               <th style="text-align: center;">Already Returned</th>
+               <th style="text-align: center;">Available</th>
+               <th style="text-align: center;">Return Qty</th>
+               <th style="text-align: center;">Reason</th>
+               <th style="text-align: right;">Unit Price</th>
+               <th style="text-align: right;">Total</th>
+               <th style="text-align: center;">Confirm</th>
+             </tr>
+           </thead>
           <tbody id="returnItemsTable">
-            {% for return_item in return_items %}
-            <tr data-sale-item-id="{{ return_item.sale_item_id }}">
-              <td class="item-name">{{ return_item.product_name }}</td>
-              <td style="text-align: center;">{{ return_item.sold_quantity }}</td>
-              <td style="text-align: center;">
-                <input type="number" name="quantity_{{ return_item.sale_item_id }}" value="{{ return_item.quantity }}" min="1" max="{{ return_item.sold_quantity }}" class="qty-input" style="width: 80px; text-align: center;">
-              </td>
-              <td style="text-align: center;">
-                <select name="reason_{{ return_item.sale_item_id }}" class="form-control" style="width: 100px; padding: 8px 10px; text-align: center; border: 2px solid #e0e0e0; border-radius: 4px; font-weight: 600; color: #00bcd4; font-size: 15px;">
-                  <option value="FAULTY" {% if return_item.return_reason == 'FAULTY' %}selected{% endif %}>Faulty</option>
-                  <option value="PROSPECT" {% if return_item.return_reason == 'PROSPECT' %}selected{% endif %}>Prospect</option>
-                </select>
-              </td>
-              <td style="text-align: right;">{{ return_item.unit_price }}</td>
-              <td style="text-align: right;" class="return-total">{{ return_item.total_price }}</td>
-              <td style="text-align: center;">
-                <button type="button" class="remove-item-btn" data-sale-item-id="{{ return_item.sale_item_id }}" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
-                  <i class='bx bx-trash'></i>
-                </button>
-              </td>
-            </tr>
-            {% endfor %}
           </tbody>
         </table>
 
@@ -102,17 +77,21 @@
   </div>
 </div>
 
+<div class="messages-container"></div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const searchInput = document.getElementById('productSearch');
-  const searchBtn = document.getElementById('searchBtn');
-  const searchResults = document.getElementById('searchResults');
+  const scannerInput = document.getElementById('scannerInput');
   const returnItemsTable = document.getElementById('returnItemsTable');
   const itemsSelectedEl = document.getElementById('itemsSelected');
   const returnTotalEl = document.getElementById('returnTotal');
   const returnForm = document.getElementById('returnForm');
 
+  let saleItems = JSON.parse(document.querySelector('.sale-container').dataset.saleItems || '[]');
   let returnItems = JSON.parse(document.querySelector('.sale-container').dataset.returnItems);
+  let isProcessingScan = false;
+  let scanBuffer = '';
+  let scanTimeout;
 
   function updateTotals() {
     let totalItems = returnItems.length;
@@ -131,111 +110,218 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function renderReturnItems() {
     returnItemsTable.innerHTML = '';
-    returnItems.forEach(item => {
+    saleItems.forEach(item => {
+      const selectedItem = returnItems.find(ri => ri.sale_item_id == item.id);
+      const isSelected = !!selectedItem;
+      const quantity = selectedItem ? selectedItem.quantity : 1;
+      const reason = selectedItem ? selectedItem.return_reason : 'FAULTY';
+      const total = selectedItem ? selectedItem.total_price : (quantity * item.unit_price).toFixed(2);
+
       const row = document.createElement('tr');
-      row.setAttribute('data-sale-item-id', item.sale_item_id);
+      row.setAttribute('data-sale-item-id', item.id);
       row.innerHTML = `
-        <td class="item-name">${item.product_name}</td>
+        <td class="item-name">${item.name}</td>
         <td style="text-align: center;">${item.sold_quantity}</td>
+        <td style="text-align: center;">${item.already_returned}</td>
+        <td style="text-align: center;">${item.available}</td>
         <td style="text-align: center;">
-          <input type="number" name="quantity_${item.sale_item_id}" value="${item.quantity}" min="1" max="${item.sold_quantity}" class="qty-input" style="width: 80px; text-align: center;">
+          <input type="number" name="quantity_${item.id}" value="${quantity}" min="1" max="${item.available}" class="qty-input" style="width: 80px; text-align: center;" ${isSelected ? '' : 'disabled'}>
         </td>
         <td style="text-align: center;">
-          <select name="reason_${item.sale_item_id}" class="form-control" style="width: 100px; padding: 8px 10px; text-align: center; border: 2px solid #e0e0e0; border-radius: 4px; font-weight: 600; color: #00bcd4; font-size: 15px;">
-            <option value="FAULTY" ${item.return_reason === 'FAULTY' ? 'selected' : ''}>Faulty</option>
-            <option value="PROSPECT" ${item.return_reason === 'PROSPECT' ? 'selected' : ''}>Prospect</option>
+          <select name="reason_${item.id}" class="form-control" style="width: 100px; padding: 8px 10px; text-align: center; border: 2px solid #e0e0e0; border-radius: 4px; font-weight: 600; color: #00bcd4; font-size: 15px;" ${isSelected ? '' : 'disabled'}>
+            <option value="FAULTY" ${reason === 'FAULTY' ? 'selected' : ''}>Faulty</option>
+            <option value="PROSPECT" ${reason === 'PROSPECT' ? 'selected' : ''}>Prospect</option>
           </select>
         </td>
         <td style="text-align: right;">${item.unit_price}</td>
-        <td style="text-align: right;" class="return-total">${item.total_price}</td>
+        <td style="text-align: right;" class="return-total">${total}</td>
         <td style="text-align: center;">
-          <button type="button" class="remove-item-btn" data-sale-item-id="${item.sale_item_id}" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
-            <i class='bx bx-trash'></i>
-          </button>
+          <input type="checkbox" name="confirm_${item.id}" ${isSelected ? 'checked' : ''} ${item.available > 0 ? '' : 'disabled'}>
         </td>
       `;
       returnItemsTable.appendChild(row);
     });
 
-    // Add event listeners
     document.querySelectorAll('.qty-input').forEach(input => {
       input.addEventListener('input', function() {
-        const saleItemId = this.name.replace('quantity_', '');
-        const item = returnItems.find(i => i.sale_item_id == saleItemId);
-        if (item) {
-          item.quantity = parseInt(this.value) || 0;
-          item.total_price = (item.quantity * parseFloat(item.unit_price)).toFixed(2);
-          this.closest('tr').querySelector('.return-total').textContent = item.total_price;
-          updateTotals();
-        }
+        updateReturnItem(this);
       });
     });
 
-    document.querySelectorAll('.remove-item-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const saleItemId = this.getAttribute('data-sale-item-id');
-        returnItems = returnItems.filter(item => item.sale_item_id != saleItemId);
-        renderReturnItems();
+    document.querySelectorAll('select[name^="reason_"]').forEach(select => {
+      select.addEventListener('change', function() {
+        updateReturnItem(this);
+      });
+    });
+
+    document.querySelectorAll('input[name^="confirm_"]').forEach(checkbox => {
+      checkbox.addEventListener('change', function() {
+        const saleItemId = this.name.replace('confirm_', '');
+        const row = this.closest('tr');
+        const qtyInput = row.querySelector('.qty-input');
+        const reasonSelect = row.querySelector('select[name^="reason_"]');
+
+        if (this.checked) {
+          qtyInput.disabled = false;
+          reasonSelect.disabled = false;
+          const item = saleItems.find(i => i.id == saleItemId);
+          returnItems.push({
+            sale_item_id: item.id,
+            product_name: item.name,
+            sold_quantity: item.sold_quantity,
+            quantity: parseInt(qtyInput.value) || 1,
+            return_reason: reasonSelect.value,
+            unit_price: item.unit_price.toString(),
+            total_price: (parseInt(qtyInput.value) || 1) * item.unit_price
+          });
+        } else {
+          qtyInput.disabled = true;
+          reasonSelect.disabled = true;
+          returnItems = returnItems.filter(ri => ri.sale_item_id != saleItemId);
+        }
         updateTotals();
       });
     });
   }
 
-  function searchProduct(query) {
-    if (!query.trim()) return;
+  function updateReturnItem(element) {
+    const row = element.closest('tr');
+    const saleItemId = row.getAttribute('data-sale-item-id');
+    const item = returnItems.find(ri => ri.sale_item_id == saleItemId);
+    if (item) {
+      const qtyInput = row.querySelector('.qty-input');
+      const reasonSelect = row.querySelector('select[name^="reason_"]');
+      item.quantity = parseInt(qtyInput.value) || 0;
+      item.return_reason = reasonSelect.value;
+      item.total_price = (item.quantity * parseFloat(item.unit_price)).toFixed(2);
+      row.querySelector('.return-total').textContent = item.total_price;
+      updateTotals();
+    }
+  }
+
+  function scanProduct(query) {
+    if (!query.trim() || isProcessingScan) return;
+
+    isProcessingScan = true;
 
     fetch(`/sales/return/search-product/?sale_id={{ sale.id }}&query=${encodeURIComponent(query)}`)
       .then(response => response.json())
       .then(data => {
-        searchResults.innerHTML = '';
         if (data.success && data.products.length > 0) {
-          data.products.forEach(product => {
-            const div = document.createElement('div');
-            div.style.cssText = 'padding: 10px; border: 1px solid #e0e0e0; margin-bottom: 5px; border-radius: 4px; background: white; cursor: pointer;';
-            div.innerHTML = `
-              <strong>${product.name}</strong><br>
-              <small>Sold: ${product.sold_quantity} | Price: ${product.unit_price}</small>
-            `;
-            div.addEventListener('click', () => addToReturn(product));
-            searchResults.appendChild(div);
-          });
+          const product = data.products[0];
+          const saleItem = saleItems.find(si => si.id == product.sale_item_id);
+          if (saleItem) {
+            if (saleItem.available > 0) {
+              const checkbox = document.querySelector(`input[name="confirm_${saleItem.id}"]`);
+              if (checkbox && !checkbox.checked) {
+                checkbox.checked = true;
+                checkbox.dispatchEvent(new Event('change'));
+
+                const row = checkbox.closest('tr');
+                row.classList.add('highlight');
+                setTimeout(() => row.classList.remove('highlight'), 300);
+
+                const wrapper = document.querySelector('.sale-items-wrapper');
+                const rowTop = row.offsetTop;
+                const rowHeight = row.offsetHeight;
+                const wrapperHeight = wrapper.clientHeight;
+                const currentScroll = wrapper.scrollTop;
+
+                if (rowTop < currentScroll || rowTop + rowHeight > currentScroll + wrapperHeight) {
+                  wrapper.scrollTop = rowTop - wrapperHeight / 2 + rowHeight / 2;
+                }
+
+                showNotification(`Added ${product.name} to return list`, 'success');
+              } else {
+                showNotification(`${product.name} is already selected for return`, 'info');
+              }
+            } else {
+              showNotification(`${product.name} has already been fully returned`, 'error');
+            }
+          } else {
+            showNotification('Product not found in sale items', 'error');
+          }
         } else {
-          searchResults.innerHTML = '<div style="padding: 10px; color: #dc3545;">No products found in this sale</div>';
+          showNotification('Product not found in this sale', 'error');
         }
       })
       .catch(error => {
-        console.error('Search error:', error);
-        searchResults.innerHTML = '<div style="padding: 10px; color: #dc3545;">Search failed</div>';
+        console.error('Scan error:', error);
+        showNotification('Error scanning product', 'error');
+      })
+      .finally(() => {
+        isProcessingScan = false;
+        scannerInput.value = '';
+        scanBuffer = '';
       });
   }
 
-  function addToReturn(product) {
-    if (returnItems.some(item => item.sale_item_id == product.sale_item_id)) {
-      alert('This product is already in the return list');
+  document.addEventListener('keydown', function(e) {
+    const activeElement = document.activeElement;
+    const isInputField = activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.tagName === 'SELECT';
+    const isQtyInput = activeElement && activeElement.classList.contains('qty-input');
+
+    if (e.key === 'Enter') {
+      if (activeElement === scannerInput) {
+        e.preventDefault();
+        clearTimeout(scanTimeout);
+        scanProduct(scannerInput.value);
+        return;
+      }
+      
+      if (isQtyInput) {
+        e.preventDefault();
+        scannerInput.focus();
+        return;
+      }
+
+      if (!isInputField) {
+        e.preventDefault();
+        if (scanBuffer.trim()) {
+          scanProduct(scanBuffer.trim());
+        }
+        return;
+      }
+    }
+
+    if (e.key === 'Escape') {
+      scanBuffer = '';
+      scannerInput.value = '';
+      scannerInput.focus();
       return;
     }
 
-    returnItems.push({
-      sale_item_id: product.sale_item_id,
-      product_name: product.name,
-      sold_quantity: product.sold_quantity,
-      quantity: 1,
-      return_reason: 'FAULTY',
-      unit_price: product.unit_price,
-      total_price: product.unit_price
-    });
+    if (!isInputField || activeElement === scannerInput) {
+      if (e.key.length === 1) {
+        scanBuffer += e.key;
+        if (activeElement !== scannerInput) {
+          scannerInput.value = scanBuffer;
+        }
+        
+        clearTimeout(scanTimeout);
+        scanTimeout = setTimeout(() => {
+          if (scanBuffer.trim()) {
+            scanProduct(scanBuffer.trim());
+          } else {
+            scanBuffer = '';
+            if (activeElement !== scannerInput) {
+              scannerInput.value = '';
+            }
+          }
+        }, 500);
+      } else if (e.key === 'Backspace') {
+        scanBuffer = scanBuffer.slice(0, -1);
+        if (activeElement !== scannerInput) {
+          scannerInput.value = scanBuffer;
+        }
+      }
+    }
+  });
 
-    renderReturnItems();
-    updateTotals();
-    searchInput.value = '';
-    searchResults.innerHTML = '';
-  }
-
-  searchBtn.addEventListener('click', () => searchProduct(searchInput.value));
-  searchInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
+  returnForm.addEventListener('submit', function(e) {
+    if (returnItems.length === 0) {
       e.preventDefault();
-      searchProduct(this.value);
+      showNotification('Please select at least one item to return', 'error');
     }
   });
 
@@ -250,6 +336,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
   renderReturnItems();
   updateTotals();
+
+  scannerInput.focus();
 });
+
+function showNotification(message, type = "info") {
+  const container = document.querySelector(".messages-container");
+
+  const messageDiv = document.createElement("div");
+  messageDiv.className = `notification ${type}`;
+  messageDiv.innerHTML = `<span>${message}</span>`;
+  container.appendChild(messageDiv);
+  setTimeout(() => {
+    messageDiv.style.opacity = "0";
+    messageDiv.style.marginRight = "-100px";
+    setTimeout(() => {
+      if (messageDiv.parentElement) {
+        messageDiv.remove();
+      }
+    }, 300);
+  }, 5000);
+}
 </script>
+
+<style>
+@keyframes highlight {
+  0% { background-color: #fff3cd; }
+  100% { background-color: transparent; }
+}
+
+.highlight {
+  animation: highlight 0.3s ease;
+}
+</style>
+
 {% endblock %}
