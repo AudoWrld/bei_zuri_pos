@@ -98,7 +98,7 @@ class SyncManager:
             with transaction.atomic():
                 self._sync_categories(data.get("categories", []))
                 self._sync_brands(data.get("brands", []))
-                self._sync_products(data.get("products", []))
+                self._sync_products(data.get("products", []), update_mode=True)
                 self._sync_users(data.get("users", []))
 
                 total_records = (
@@ -133,7 +133,6 @@ class SyncManager:
     def _sync_categories(self, categories_data):
         try:
             if not categories_data:
-                print("No category data to sync")
                 return
 
             synced_count = 0
@@ -162,7 +161,8 @@ class SyncManager:
                         f"  Error syncing category {category_data.get('name', 'unknown')}: {e}"
                     )
 
-            print(f"Synced {synced_count} categories, {error_count} errors")
+            if synced_count > 0:
+                print(f"Synced {synced_count} categories, {error_count} errors")
         except Exception as e:
             print(f"Sync categories error: {e}")
             import traceback
@@ -173,7 +173,6 @@ class SyncManager:
     def _sync_brands(self, brands_data):
         try:
             if not brands_data:
-                print("No brand data to sync")
                 return
 
             synced_count = 0
@@ -202,7 +201,8 @@ class SyncManager:
                         f"  Error syncing brand {brand_data.get('name', 'unknown')}: {e}"
                     )
 
-            print(f"Synced {synced_count} brands, {error_count} errors")
+            if synced_count > 0:
+                print(f"Synced {synced_count} brands, {error_count} errors")
         except Exception as e:
             print(f"Sync brands error: {e}")
             import traceback
@@ -210,17 +210,34 @@ class SyncManager:
             traceback.print_exc()
             raise
 
-    def _sync_products(self, products_data):
+    def _sync_products(self, products_data, update_mode=False):
         try:
             if not products_data:
-                print("No product data to sync")
                 return
 
             synced_count = 0
             error_count = 0
+            skipped_count = 0
 
             for product_data in products_data:
                 try:
+                    existing_product = Product.objects.filter(
+                        server_id=product_data["id"]
+                    ).first()
+
+                    if update_mode and existing_product:
+                        if existing_product.quantity != product_data["quantity"]:
+                            print(
+                                f"  Warning: Stock mismatch for {product_data['name']}"
+                            )
+                            print(
+                                f"    Local: {existing_product.quantity}, Server: {product_data['quantity']}"
+                            )
+                            print(f"    Keeping local stock, syncing other fields only")
+
+                            product_data["quantity"] = existing_product.quantity
+                            product_data["sold_count"] = existing_product.sold_count
+
                     category = None
                     if product_data.get("category_id"):
                         category = Category.objects.filter(
@@ -280,7 +297,10 @@ class SyncManager:
 
                     traceback.print_exc()
 
-            print(f"Synced {synced_count} products, {error_count} errors")
+            if synced_count > 0:
+                print(
+                    f"Synced {synced_count} products, {error_count} errors, {skipped_count} skipped"
+                )
         except Exception as e:
             print(f"Sync products error: {e}")
             import traceback
@@ -291,7 +311,6 @@ class SyncManager:
     def _sync_users(self, users_data):
         try:
             if not users_data:
-                print("No user data to sync")
                 return
 
             synced_count = 0
@@ -333,7 +352,8 @@ class SyncManager:
                         f"  Error syncing user {user_data.get('username', 'unknown')}: {e}"
                     )
 
-            print(f"Synced {synced_count} users, {error_count} errors")
+            if synced_count > 0:
+                print(f"Synced {synced_count} users, {error_count} errors")
         except Exception as e:
             print(f"Sync users error: {e}")
             import traceback

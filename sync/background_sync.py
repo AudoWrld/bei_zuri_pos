@@ -10,7 +10,7 @@ class BackgroundSync:
         self.interval = interval
         self.running = False
         self.thread = None
-        self.sync_manager = SyncManager()
+        self.sync_manager = None
 
     def start(self):
         if (
@@ -22,6 +22,7 @@ class BackgroundSync:
             return
 
         if not self.running:
+            self.sync_manager = SyncManager()
             self.running = True
             self.thread = threading.Thread(target=self._sync_loop, daemon=True)
             self.thread.start()
@@ -66,5 +67,9 @@ class BackgroundSync:
 
 
 sync_service = BackgroundSync(
-    interval=settings.SYNC_INTERVAL if settings.IS_DESKTOP else 300
+    interval=(
+        settings.SYNC_INTERVAL
+        if hasattr(settings, "SYNC_INTERVAL") and settings.IS_DESKTOP
+        else 300
+    )
 )
