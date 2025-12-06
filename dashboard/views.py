@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, F
 from django.utils import timezone
 from sales.models import Sale, Return
 from products.models import Product
@@ -103,8 +103,75 @@ def supervisor_dashboard(request):
         messages.error(request, "Access denied")
         return redirect("dashboard")
 
+    today = timezone.now().date()
+    week_ago = today - timezone.timedelta(days=7)
+    month_start = today.replace(day=1)
+
+    # Sales statistics
+    today_sales = Sale.objects.filter(completed_at__date=today).aggregate(
+        total=Sum("final_amount"), count=Count("id")
+    )
+    week_sales = Sale.objects.filter(completed_at__date__gte=week_ago).aggregate(
+        total=Sum("final_amount"), count=Count("id")
+    )
+    month_sales = Sale.objects.filter(completed_at__date__gte=month_start).aggregate(
+        total=Sum("final_amount"), count=Count("id")
+    )
+
+    # Returns statistics
+    today_returns = Return.objects.filter(created_at__date=today).count()
+    week_returns = Return.objects.filter(created_at__date__gte=week_ago).count()
+
+    # Delivery statistics
+    pending_deliveries = Delivery.objects.filter(status='pending').count()
+    active_deliveries = Delivery.objects.filter(status__in=['assigned', 'in_transit']).count()
+    completed_deliveries_today = Delivery.objects.filter(
+        status='delivered', delivered_at__date=today
+    ).count()
+
+    # Inventory alerts
+    low_stock_count = Product.objects.filter(
+        is_active=True, quantity__lte=F("low_stock_threshold")
+    ).count()
+    out_of_stock_count = Product.objects.filter(is_active=True, quantity=0).count()
+
+    # User statistics
+    active_users = User.objects.filter(is_active=True).count()
+    delivery_guys_count = User.objects.filter(role=User.DELIVERY_GUY, is_active=True).count()
+    cashiers_count = User.objects.filter(role=User.CASHIER, is_active=True).count()
+
+    # Recent activities
+    recent_sales = Sale.objects.select_related('cashier').order_by('-completed_at')[:5]
+    recent_deliveries = Delivery.objects.select_related('delivery_guy', 'sale').order_by('-created_at')[:5]
+
+    # Top selling products today
+    top_products_today = (
+        Product.objects.filter(
+            saleitem__sale__completed_at__date=today,
+            is_active=True
+        )
+        .annotate(sold_quantity=Sum('saleitem__quantity'))
+        .order_by('-sold_quantity')[:5]
+    )
+
     context = {
         "user": request.user,
+        "today_sales": today_sales,
+        "week_sales": week_sales,
+        "month_sales": month_sales,
+        "today_returns": today_returns,
+        "week_returns": week_returns,
+        "pending_deliveries": pending_deliveries,
+        "active_deliveries": active_deliveries,
+        "completed_deliveries_today": completed_deliveries_today,
+        "low_stock_count": low_stock_count,
+        "out_of_stock_count": out_of_stock_count,
+        "active_users": active_users,
+        "delivery_guys_count": delivery_guys_count,
+        "cashiers_count": cashiers_count,
+        "recent_sales": recent_sales,
+        "recent_deliveries": recent_deliveries,
+        "top_products_today": top_products_today,
     }
     return render(request, "dashboard/supervisor_dashboard.html", context)
 
