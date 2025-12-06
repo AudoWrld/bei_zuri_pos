@@ -53,9 +53,9 @@ def main():
     window = webview.create_window(
         "BeiZuri POS",
         f"http://127.0.0.1:{port}/splash/",
-        width=1280,
+        width=1480,
         height=720,
-        min_size=(1280, 720),
+        min_size=(1480, 720),
         resizable=True,
         fullscreen=False,
         text_select=True,
