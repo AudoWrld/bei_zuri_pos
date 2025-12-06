@@ -44,21 +44,17 @@ def main():
     server_thread = threading.Thread(target=start_django, args=(port,), daemon=True)
     server_thread.start()
 
-    print(f"Starting server on port {port}...")
     for i in range(30):
         if is_port_in_use(port):
-            print("Server ready!")
             break
-        time.sleep(1)
-    else:
-        print("Warning: Server might not be ready")
+        time.sleep(0.1)
 
     window = webview.create_window(
         "BeiZuri POS",
         f"http://127.0.0.1:{port}",
-        width=1400,
-        height=900,
-        min_size=(1024, 768),
+        width=1280,
+        height=720,
+        min_size=(1280, 720),
         resizable=True,
         fullscreen=False,
         text_select=True,
