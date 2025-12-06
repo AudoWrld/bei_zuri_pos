@@ -41,7 +41,7 @@ class SyncAPIViewSet(viewsets.ViewSet):
 
         return Response(
             {
-                "users": UserSerializer(users, many=True).data,
+                "users": UserSyncSerializer(users, many=True).data,
                 "sync_timestamp": timezone.now().isoformat(),
                 "has_updates": users.exists(),
             }
