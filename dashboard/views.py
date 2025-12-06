@@ -64,35 +64,27 @@ def cashier_dashboard(request):
     today = timezone.now().date()
 
     today_sales = Sale.objects.filter(
-        cashier=request.user,
-        completed_at__date=today
-    ).aggregate(
-        total=Sum('final_amount'),
-        count=Count('id')
-    )
+        cashier=request.user, completed_at__date=today
+    ).aggregate(total=Sum("final_amount"), count=Count("id"))
 
-    recent_sales = Sale.objects.filter(
-        cashier=request.user,
-        completed_at__isnull=False
-    ).select_related().order_by('-completed_at')[:10]
+    recent_sales = (
+        Sale.objects.filter(cashier=request.user, completed_at__isnull=False)
+        .select_related()
+        .order_by("-completed_at")[:10]
+    )
 
     month_start = today.replace(day=1)
     month_sales = Sale.objects.filter(
-        cashier=request.user,
-        completed_at__date__gte=month_start
-    ).aggregate(
-        total=Sum('final_amount'),
-        count=Count('id')
-    )
+        cashier=request.user, completed_at__date__gte=month_start
+    ).aggregate(total=Sum("final_amount"), count=Count("id"))
 
     pending_returns = Return.objects.filter(
-        cashier=request.user,
-        created_at__date=today
+        cashier=request.user, created_at__date=today
     ).count()
 
     avg_transaction = 0
-    if today_sales.get('count') and today_sales.get('count') > 0:
-        avg_transaction = today_sales.get('total', 0) / today_sales.get('count', 1)
+    if today_sales.get("count") and today_sales.get("count") > 0:
+        avg_transaction = today_sales.get("total", 0) / today_sales.get("count", 1)
 
     context = {
         "user": request.user,
@@ -165,3 +157,7 @@ def customer_dashboard(request):
         "user": request.user,
     }
     return render(request, "dashboard/customer_dashboard.html", context)
+
+
+def splash_view(request):
+    return render(request, "splash.html")
