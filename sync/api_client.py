@@ -1,6 +1,5 @@
 import requests
 from django.conf import settings
-from django.utils import timezone
 
 
 class ServerAPI:
@@ -80,4 +79,34 @@ class ServerAPI:
             return response.json()
         except requests.exceptions.RequestException as e:
             print(f"Push returns error: {e}")
+            return None
+
+    def pull_sales(self, since):
+        """Pull sales from server (from other terminals)"""
+        try:
+            response = requests.get(
+                f"{self.base_url}/api/sync/pull_sales/",
+                params={"since": since, "store_id": self.store_id},
+                headers=self.get_headers(),
+                timeout=30,
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Pull sales error: {e}")
+            return None
+
+    def pull_returns(self, since):
+        """Pull returns from server (from other terminals)"""
+        try:
+            response = requests.get(
+                f"{self.base_url}/api/sync/pull_returns/",
+                params={"since": since, "store_id": self.store_id},
+                headers=self.get_headers(),
+                timeout=30,
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Pull returns error: {e}")
             return None

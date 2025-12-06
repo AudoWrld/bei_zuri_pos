@@ -27,4 +27,14 @@ urlpatterns = [
         SyncAPIViewSet.as_view({"post": "push_returns"}),
         name="sync-push-returns",
     ),
+    path(
+        "api/sync/pull_sales/",
+        SyncAPIViewSet.as_view({"get": "pull_sales"}),
+        name="sync-pull-sales",
+    ),
+    path(
+        "api/sync/pull_returns/",
+        SyncAPIViewSet.as_view({"get": "pull_returns"}),
+        name="sync-pull-returns",
+    ),
 ]

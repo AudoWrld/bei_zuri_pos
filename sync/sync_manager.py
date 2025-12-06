@@ -65,8 +65,11 @@ class SyncManager:
 
             self.push_sales_to_server()
             self.push_returns_to_server()
+            self.pull_from_server()
+            self.pull_sales_from_server()
+            self.pull_returns_from_server()
 
-            return self.pull_from_server()
+            return True
         except Exception as e:
             print(f"Full sync error: {e}")
             import traceback
@@ -134,6 +137,195 @@ class SyncManager:
                 error_message=str(e),
                 completed_at=timezone.now(),
             )
+            return False
+
+    def pull_sales_from_server(self):
+        try:
+            last_sync = (
+                SyncLog.objects.filter(sync_type="pull_sales", status="success")
+                .order_by("-completed_at")
+                .first()
+            )
+
+            last_sync_time = (
+                last_sync.completed_at
+                if last_sync
+                else timezone.now() - timezone.timedelta(days=30)
+            )
+
+            print(f"Pulling sales since: {last_sync_time.isoformat()}")
+            data = self.api.pull_sales(last_sync_time.isoformat())
+
+            if not data or not data.get("sales"):
+                print("No new sales from server")
+                return True
+
+            synced_count = 0
+            with transaction.atomic():
+                for sale_data in data.get("sales", []):
+                    if Sale.objects.filter(
+                        sale_number=sale_data["sale_number"]
+                    ).exists():
+                        continue
+
+                    try:
+                        cashier = User.objects.filter(
+                            server_id=sale_data["cashier_id"]
+                        ).first()
+                        if not cashier:
+                            print(f"Cashier not found: {sale_data['cashier_id']}")
+                            continue
+
+                        sale = Sale.objects.create(
+                            sale_number=sale_data["sale_number"],
+                            sale_type=sale_data["sale_type"],
+                            cashier=cashier,
+                            total_amount=sale_data["total_amount"],
+                            discount_amount=sale_data.get("discount_amount", 0),
+                            final_amount=sale_data["final_amount"],
+                            payment_method=sale_data["payment_method"],
+                            money_received=sale_data.get("money_received"),
+                            change_amount=sale_data.get("change_amount"),
+                            notes=sale_data.get("notes", ""),
+                            created_at=sale_data["created_at"],
+                            completed_at=sale_data["completed_at"],
+                            synced_at=timezone.now(),
+                        )
+
+                        for item_data in sale_data.get("items", []):
+                            product = Product.objects.filter(
+                                server_id=item_data["product_id"]
+                            ).first()
+                            if not product:
+                                continue
+
+                            SaleItem.objects.create(
+                                sale=sale,
+                                product=product,
+                                quantity=item_data["quantity"],
+                                unit_price=item_data["unit_price"],
+                                discount_amount=item_data.get("discount_amount", 0),
+                                total_amount=item_data["total_amount"],
+                            )
+
+                        synced_count += 1
+                        print(f"  Pulled sale: {sale.sale_number}")
+
+                    except Exception as e:
+                        print(f"Error pulling sale {sale_data.get('sale_number')}: {e}")
+                        continue
+
+                SyncLog.objects.create(
+                    sync_type="pull_sales",
+                    status="success",
+                    records_count=synced_count,
+                    completed_at=timezone.now(),
+                )
+
+            print(f"Pulled {synced_count} sales from server")
+            return True
+
+        except Exception as e:
+            print(f"Pull sales error: {e}")
+            import traceback
+
+            traceback.print_exc()
+            return False
+
+    def pull_returns_from_server(self):
+        try:
+            last_sync = (
+                SyncLog.objects.filter(sync_type="pull_returns", status="success")
+                .order_by("-completed_at")
+                .first()
+            )
+
+            last_sync_time = (
+                last_sync.completed_at
+                if last_sync
+                else timezone.now() - timezone.timedelta(days=30)
+            )
+
+            print(f"Pulling returns since: {last_sync_time.isoformat()}")
+            data = self.api.pull_returns(last_sync_time.isoformat())
+
+            if not data or not data.get("returns"):
+                print("No new returns from server")
+                return True
+
+            synced_count = 0
+            with transaction.atomic():
+                for return_data in data.get("returns", []):
+                    if Return.objects.filter(
+                        return_number=return_data["return_number"]
+                    ).exists():
+                        continue
+
+                    try:
+                        cashier = User.objects.filter(
+                            server_id=return_data["cashier_id"]
+                        ).first()
+                        sale = Sale.objects.filter(
+                            sale_number=return_data["sale_number"]
+                        ).first()
+
+                        if not cashier or not sale:
+                            print(
+                                f"Cashier or sale not found for return {return_data['return_number']}"
+                            )
+                            continue
+
+                        return_obj = Return.objects.create(
+                            return_number=return_data["return_number"],
+                            sale=sale,
+                            cashier=cashier,
+                            total_return_amount=return_data["total_return_amount"],
+                            notes=return_data.get("notes", ""),
+                            created_at=return_data["created_at"],
+                            synced_at=timezone.now(),
+                        )
+
+                        for item_data in return_data.get("items", []):
+                            sale_item = SaleItem.objects.filter(
+                                sale=sale, product__server_id=item_data["product_id"]
+                            ).first()
+
+                            if not sale_item:
+                                continue
+
+                            ReturnItem.objects.create(
+                                return_fk=return_obj,
+                                sale_item=sale_item,
+                                quantity=item_data["quantity"],
+                                return_reason=item_data.get("return_reason", ""),
+                                unit_price=item_data["unit_price"],
+                                total_price=item_data["total_price"],
+                            )
+
+                        synced_count += 1
+                        print(f"  Pulled return: {return_obj.return_number}")
+
+                    except Exception as e:
+                        print(
+                            f"Error pulling return {return_data.get('return_number')}: {e}"
+                        )
+                        continue
+
+                SyncLog.objects.create(
+                    sync_type="pull_returns",
+                    status="success",
+                    records_count=synced_count,
+                    completed_at=timezone.now(),
+                )
+
+            print(f"Pulled {synced_count} returns from server")
+            return True
+
+        except Exception as e:
+            print(f"Pull returns error: {e}")
+            import traceback
+
+            traceback.print_exc()
             return False
 
     def push_sales_to_server(self):

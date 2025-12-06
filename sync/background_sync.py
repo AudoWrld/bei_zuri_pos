@@ -32,6 +32,19 @@ class BackgroundSync:
         self.running = False
         print("Background sync stopped")
 
+    def sync_now(self):
+        """Trigger immediate sync (called from views or on app close)"""
+        if self.sync_manager:
+            try:
+                print(
+                    f"[{timezone.now().strftime('%H:%M:%S')}] Manual sync triggered..."
+                )
+                return self.sync_manager.full_sync()
+            except Exception as e:
+                print(f"Manual sync error: {e}")
+                return False
+        return False
+
     def _sync_loop(self):
         first_run = True
 
@@ -50,15 +63,28 @@ class BackgroundSync:
                         self.sync_manager.initial_setup()
                     else:
                         print("Initial sync already completed")
+
+                    if self.sync_manager.api.test_connection():
+                        print(
+                            f"[{timezone.now().strftime('%H:%M:%S')}] Running first sync..."
+                        )
+                        self.sync_manager.full_sync()
+
                     first_run = False
 
                 time.sleep(self.interval)
 
                 if self.sync_manager.api.test_connection():
                     print(
-                        f"[{timezone.now().strftime('%H:%M:%S')}] Running background sync..."
+                        f"[{timezone.now().strftime('%H:%M:%S')}] Running scheduled sync..."
                     )
-                    self.sync_manager.full_sync()
+
+                    self.sync_manager.push_sales_to_server()
+                    self.sync_manager.push_returns_to_server()
+
+                    self.sync_manager.pull_from_server()
+
+                    print(f"[{timezone.now().strftime('%H:%M:%S')}] ✓ Sync completed")
                 else:
                     print(
                         f"[{timezone.now().strftime('%H:%M:%S')}] Server unreachable, working offline"
