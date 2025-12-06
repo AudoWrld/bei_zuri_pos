@@ -48,9 +48,16 @@ class BackgroundSync:
                     ).exists():
                         print("Running initial sync...")
                         self.sync_manager.initial_setup()
+                    else:
+                        print("Initial sync already completed")
                     first_run = False
 
+                time.sleep(self.interval)
+
                 if self.sync_manager.api.test_connection():
+                    print(
+                        f"[{timezone.now().strftime('%H:%M:%S')}] Running background sync..."
+                    )
                     self.sync_manager.full_sync()
                 else:
                     print(
@@ -59,8 +66,9 @@ class BackgroundSync:
 
             except Exception as e:
                 print(f"Sync error: {e}")
+                import traceback
 
-            time.sleep(self.interval)
+                traceback.print_exc()
 
 
 sync_service = BackgroundSync(

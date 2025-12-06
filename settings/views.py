@@ -8,6 +8,12 @@ from .forms import CustomUserCreationForm, CustomUserChangeForm
 import subprocess
 import sys
 import os
+import platform
+
+if platform.system() == "Windows":
+    CREATE_NO_WINDOW = subprocess.CREATE_NO_WINDOW
+else:
+    CREATE_NO_WINDOW = 0
 
 
 def can_manage_users(user):
@@ -46,7 +52,8 @@ def setup_printer(request):
         try:
             setup_script = os.path.join(os.path.dirname(__file__), "../hardware/setup_printer.py")
             result = subprocess.run([sys.executable, setup_script],
-                                  capture_output=True, text=True, timeout=60)
+                                  capture_output=True, text=True, timeout=60,
+                                  creationflags=CREATE_NO_WINDOW)
 
             if result.returncode == 0:
                 return JsonResponse({
