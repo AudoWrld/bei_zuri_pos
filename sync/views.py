@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from .serializers import UserSerializer
+from .serializers import UserSyncSerializer
 
 User = get_user_model()
 
@@ -24,7 +24,7 @@ class SyncAPIViewSet(viewsets.ViewSet):
 
         return Response(
             {
-                "users": UserSerializer(users, many=True).data,
+                "users": UserSyncSerializer(users, many=True).data,
                 "sync_timestamp": timezone.now().isoformat(),
             }
         )
