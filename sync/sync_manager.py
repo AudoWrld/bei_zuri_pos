@@ -78,22 +78,24 @@ class SyncManager:
 
     def _sync_users(self, users_data):
         for user_data in users_data:
+            defaults = {
+                "username": user_data["username"],
+                "email": user_data.get("email", ""),
+                "first_name": user_data.get("first_name", ""),
+                "last_name": user_data.get("last_name", ""),
+                "role": user_data["role"],
+                "phone_number": user_data.get("phone_number", ""),
+                "is_active": user_data["is_active"],
+                "synced_at": timezone.now(),
+            }
+
+            # Copy password hash if provided by server
+            if "password" in user_data and user_data["password"]:
+                defaults["password"] = user_data["password"]
+
             user, created = User.objects.update_or_create(
                 server_id=user_data["id"],
-                defaults={
-                    "username": user_data["username"],
-                    "email": user_data.get("email", ""),
-                    "first_name": user_data.get("first_name", ""),
-                    "last_name": user_data.get("last_name", ""),
-                    "role": user_data["role"],
-                    "phone_number": user_data.get("phone_number", ""),
-                    "is_active": user_data["is_active"],
-                    "synced_at": timezone.now(),
-                },
+                defaults=defaults,
             )
-
-            if created and not user.has_usable_password():
-                user.set_password("changeme123")
-                user.save()
 
         print(f"Synced {len(users_data)} users")
