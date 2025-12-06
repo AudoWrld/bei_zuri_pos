@@ -2,6 +2,7 @@ from django.utils import timezone
 from django.db import transaction
 from django.contrib.auth import get_user_model
 from products.models import Product, Category, Brand, Barcode
+from sales.models import Sale, SaleItem, Return, ReturnItem
 from .api_client import ServerAPI
 from .models import SyncLog
 
@@ -62,6 +63,9 @@ class SyncManager:
                 print("Server unreachable, skipping sync")
                 return False
 
+            self.push_sales_to_server()
+            self.push_returns_to_server()
+
             return self.pull_from_server()
         except Exception as e:
             print(f"Full sync error: {e}")
@@ -98,7 +102,9 @@ class SyncManager:
             with transaction.atomic():
                 self._sync_categories(data.get("categories", []), check_deletions=True)
                 self._sync_brands(data.get("brands", []), check_deletions=True)
-                self._sync_products(data.get("products", []), update_mode=True, check_deletions=True)
+                self._sync_products(
+                    data.get("products", []), update_mode=True, check_deletions=True
+                )
                 self._sync_users(data.get("users", []), check_deletions=True)
 
                 total_records = (
@@ -130,6 +136,187 @@ class SyncManager:
             )
             return False
 
+    def push_sales_to_server(self):
+        try:
+            unsynced_sales = (
+                Sale.objects.filter(completed_at__isnull=False, synced_at__isnull=True)
+                .select_related("cashier")
+                .prefetch_related("items__product")
+            )
+
+            if not unsynced_sales.exists():
+                print("No sales to push")
+                return True
+
+            sales_data = []
+            for sale in unsynced_sales:
+                items_data = []
+                for item in sale.items.all():
+                    items_data.append(
+                        {
+                            "product_id": (
+                                item.product.server_id
+                                if item.product.server_id
+                                else item.product.id
+                            ),
+                            "quantity": item.quantity,
+                            "unit_price": str(item.unit_price),
+                            "discount_amount": str(item.discount_amount),
+                            "total_amount": str(item.total_amount),
+                        }
+                    )
+
+                sales_data.append(
+                    {
+                        "sale_number": sale.sale_number,
+                        "sale_type": sale.sale_type,
+                        "cashier_id": (
+                            sale.cashier.server_id
+                            if sale.cashier.server_id
+                            else sale.cashier.id
+                        ),
+                        "total_amount": str(sale.total_amount),
+                        "discount_amount": str(sale.discount_amount),
+                        "final_amount": str(sale.final_amount),
+                        "payment_method": sale.payment_method,
+                        "money_received": (
+                            str(sale.money_received) if sale.money_received else None
+                        ),
+                        "change_amount": (
+                            str(sale.change_amount) if sale.change_amount else None
+                        ),
+                        "notes": sale.notes,
+                        "created_at": sale.created_at.isoformat(),
+                        "completed_at": sale.completed_at.isoformat(),
+                        "items": items_data,
+                    }
+                )
+
+            print(f"Pushing {len(sales_data)} sales to server...")
+            result = self.api.push_sales(sales_data)
+
+            if result and result.get("success"):
+                with transaction.atomic():
+                    unsynced_sales.update(synced_at=timezone.now())
+
+                    SyncLog.objects.create(
+                        sync_type="push_sales",
+                        status="success",
+                        records_count=len(sales_data),
+                        completed_at=timezone.now(),
+                    )
+
+                print(f"Successfully pushed {len(sales_data)} sales")
+                return True
+            else:
+                print("Failed to push sales to server")
+                SyncLog.objects.create(
+                    sync_type="push_sales",
+                    status="failed",
+                    error_message="Server returned failure",
+                    completed_at=timezone.now(),
+                )
+                return False
+
+        except Exception as e:
+            print(f"Push sales error: {e}")
+            import traceback
+
+            traceback.print_exc()
+            SyncLog.objects.create(
+                sync_type="push_sales",
+                status="failed",
+                error_message=str(e),
+                completed_at=timezone.now(),
+            )
+            return False
+
+    def push_returns_to_server(self):
+        try:
+            unsynced_returns = (
+                Return.objects.filter(synced_at__isnull=True)
+                .select_related("cashier", "sale")
+                .prefetch_related("items__sale_item__product")
+            )
+
+            if not unsynced_returns.exists():
+                print("No returns to push")
+                return True
+
+            returns_data = []
+            for return_obj in unsynced_returns:
+                items_data = []
+                for item in return_obj.items.all():
+                    items_data.append(
+                        {
+                            "sale_item_id": item.sale_item.id,
+                            "product_id": (
+                                item.sale_item.product.server_id
+                                if item.sale_item.product.server_id
+                                else item.sale_item.product.id
+                            ),
+                            "quantity": item.quantity,
+                            "return_reason": item.return_reason,
+                            "unit_price": str(item.unit_price),
+                            "total_price": str(item.total_price),
+                        }
+                    )
+
+                returns_data.append(
+                    {
+                        "return_number": return_obj.return_number,
+                        "sale_number": return_obj.sale.sale_number,
+                        "cashier_id": (
+                            return_obj.cashier.server_id
+                            if return_obj.cashier.server_id
+                            else return_obj.cashier.id
+                        ),
+                        "total_return_amount": str(return_obj.total_return_amount),
+                        "notes": return_obj.notes,
+                        "created_at": return_obj.created_at.isoformat(),
+                        "items": items_data,
+                    }
+                )
+
+            print(f"Pushing {len(returns_data)} returns to server...")
+            result = self.api.push_returns(returns_data)
+
+            if result and result.get("success"):
+                with transaction.atomic():
+                    unsynced_returns.update(synced_at=timezone.now())
+
+                    SyncLog.objects.create(
+                        sync_type="push_returns",
+                        status="success",
+                        records_count=len(returns_data),
+                        completed_at=timezone.now(),
+                    )
+
+                print(f"Successfully pushed {len(returns_data)} returns")
+                return True
+            else:
+                print("Failed to push returns to server")
+                SyncLog.objects.create(
+                    sync_type="push_returns",
+                    status="failed",
+                    error_message="Server returned failure",
+                    completed_at=timezone.now(),
+                )
+                return False
+
+        except Exception as e:
+            print(f"Push returns error: {e}")
+            import traceback
+
+            traceback.print_exc()
+            SyncLog.objects.create(
+                sync_type="push_returns",
+                status="failed",
+                error_message=str(e),
+                completed_at=timezone.now(),
+            )
+            return False
+
     def _sync_categories(self, categories_data, check_deletions=False):
         try:
             if not categories_data:
@@ -142,10 +329,12 @@ class SyncManager:
             if check_deletions:
                 server_ids = [cat["id"] for cat in categories_data]
                 local_categories = Category.objects.filter(server_id__isnull=False)
-                
+
                 for category in local_categories:
                     if category.server_id not in server_ids:
-                        print(f"  Deleting: Category {category.name} (removed from server)")
+                        print(
+                            f"  Deleting: Category {category.name} (removed from server)"
+                        )
                         category.delete()
                         deleted_count += 1
 
@@ -173,7 +362,9 @@ class SyncManager:
                     )
 
             if synced_count > 0 or deleted_count > 0:
-                print(f"Synced {synced_count} categories, {deleted_count} deleted, {error_count} errors")
+                print(
+                    f"Synced {synced_count} categories, {deleted_count} deleted, {error_count} errors"
+                )
         except Exception as e:
             print(f"Sync categories error: {e}")
             import traceback
@@ -193,7 +384,7 @@ class SyncManager:
             if check_deletions:
                 server_ids = [brand["id"] for brand in brands_data]
                 local_brands = Brand.objects.filter(server_id__isnull=False)
-                
+
                 for brand in local_brands:
                     if brand.server_id not in server_ids:
                         print(f"  Deleting: Brand {brand.name} (removed from server)")
@@ -224,7 +415,9 @@ class SyncManager:
                     )
 
             if synced_count > 0 or deleted_count > 0:
-                print(f"Synced {synced_count} brands, {deleted_count} deleted, {error_count} errors")
+                print(
+                    f"Synced {synced_count} brands, {deleted_count} deleted, {error_count} errors"
+                )
         except Exception as e:
             print(f"Sync brands error: {e}")
             import traceback
@@ -244,10 +437,12 @@ class SyncManager:
             if check_deletions:
                 server_ids = [prod["id"] for prod in products_data]
                 local_products = Product.objects.filter(server_id__isnull=False)
-                
+
                 for product in local_products:
                     if product.server_id not in server_ids:
-                        print(f"  Deleting: Product {product.name} (removed from server)")
+                        print(
+                            f"  Deleting: Product {product.name} (removed from server)"
+                        )
                         product.delete()
                         deleted_count += 1
 
@@ -306,9 +501,13 @@ class SyncManager:
                     )
 
                     if check_deletions:
-                        server_barcode_ids = [b["id"] for b in product_data.get("barcodes", [])]
-                        local_barcodes = Barcode.objects.filter(product=product, server_id__isnull=False)
-                        
+                        server_barcode_ids = [
+                            b["id"] for b in product_data.get("barcodes", [])
+                        ]
+                        local_barcodes = Barcode.objects.filter(
+                            product=product, server_id__isnull=False
+                        )
+
                         for barcode in local_barcodes:
                             if barcode.server_id not in server_barcode_ids:
                                 print(f"    Deleting barcode: {barcode.barcode}")
@@ -361,7 +560,7 @@ class SyncManager:
             if check_deletions:
                 server_ids = [user["id"] for user in users_data]
                 local_users = User.objects.filter(server_id__isnull=False)
-                
+
                 for user in local_users:
                     if user.server_id not in server_ids:
                         print(f"  Deleting: User {user.username} (removed from server)")
@@ -405,7 +604,9 @@ class SyncManager:
                     )
 
             if synced_count > 0 or deleted_count > 0:
-                print(f"Synced {synced_count} users, {deleted_count} deleted, {error_count} errors")
+                print(
+                    f"Synced {synced_count} users, {deleted_count} deleted, {error_count} errors"
+                )
         except Exception as e:
             print(f"Sync users error: {e}")
             import traceback

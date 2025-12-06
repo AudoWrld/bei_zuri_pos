@@ -33,6 +33,7 @@ class Sale(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     completed_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    synced_at = models.DateTimeField(null=True, blank=True, db_index=True)
     is_held = models.BooleanField(default=False, db_index=True)
 
     class Meta:
@@ -41,6 +42,7 @@ class Sale(models.Model):
             models.Index(fields=["cashier"]),
             models.Index(fields=["created_at"]),
             models.Index(fields=["completed_at"]),
+            models.Index(fields=["synced_at"]),
         ]
         ordering = ["-created_at"]
 
@@ -49,7 +51,6 @@ class Sale(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.sale_number:
-            # Generate sale number like SALE-20241125-0001
             today = timezone.now().strftime("%Y%m%d")
             last_sale = (
                 Sale.objects.filter(sale_number__startswith=f"SALE-{today}")
@@ -68,13 +69,11 @@ class Sale(models.Model):
         super().save(*args, **kwargs)
 
     def complete_sale(self):
-        """Complete the sale and update inventory"""
         if self.completed_at:
-            return  # Already completed
+            return
 
         self.completed_at = timezone.now()
 
-        # Calculate totals
         total = Decimal("0")
         special_total = Decimal("0")
 
@@ -85,7 +84,6 @@ class Sale(models.Model):
                 item_total = item.quantity * item.unit_price
             total += item_total
 
-            # Update product sold count and revenue
             item.product.sell(item.quantity)
 
         self.total_amount = total
@@ -112,7 +110,6 @@ class SaleItem(models.Model):
         return f"{self.product.name} x{self.quantity}"
 
     def save(self, *args, **kwargs):
-        # Calculate total amount
         if self.sale.sale_type == "SPECIAL":
             self.total_amount = (
                 self.quantity * self.product.special_price - self.discount_amount
@@ -134,6 +131,7 @@ class Return(models.Model):
         max_digits=12, decimal_places=2, default=0
     )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    synced_at = models.DateTimeField(null=True, blank=True, db_index=True)
     notes = models.TextField(blank=True)
 
     class Meta:
@@ -141,6 +139,7 @@ class Return(models.Model):
             models.Index(fields=["return_number"]),
             models.Index(fields=["cashier"]),
             models.Index(fields=["created_at"]),
+            models.Index(fields=["synced_at"]),
         ]
         ordering = ["-created_at"]
 
