@@ -1,0 +1,6 @@
+{
+  "name": "Generic Thermal Printer",
+  "vendor_id": "0x483",
+  "product_id": "0x5743",
+  "out_endpoint": "0x1"
+}

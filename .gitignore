@@ -34,5 +34,3 @@ Thumbs.db
 # Ignore all migrations
 */migrations/
 
-# Config 
-hardware/printer_config.json
