@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserSyncSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
@@ -22,4 +22,3 @@ class UserSerializer(serializers.ModelSerializer):
             "updated_at",
             "password",
         ]
-        extra_kwargs = {"password": {"write_only": True}}
