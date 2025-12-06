@@ -47,6 +47,9 @@ class Category(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    server_id = models.IntegerField(unique=True, null=True, blank=True, db_index=True)
+    synced_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         verbose_name_plural = "Categories"
         ordering = ["name"]
@@ -60,6 +63,9 @@ class Brand(models.Model):
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    server_id = models.IntegerField(unique=True, null=True, blank=True, db_index=True)
+    synced_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["name"]
@@ -83,6 +89,9 @@ class Barcode(models.Model):
     )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    server_id = models.IntegerField(unique=True, null=True, blank=True, db_index=True)
+    synced_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -149,6 +158,9 @@ class Product(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    server_id = models.IntegerField(unique=True, null=True, blank=True, db_index=True)
+    synced_at = models.DateTimeField(null=True, blank=True)
 
     def clean(self):
         from django.core.exceptions import ValidationError
