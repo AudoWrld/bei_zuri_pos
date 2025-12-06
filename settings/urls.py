@@ -6,6 +6,7 @@ app_name = "settings"
 urlpatterns = [
     path("", views.settings_home, name="settings_home"),
     path("printer/", views.printer_settings, name="printer_settings"),
+    path("printer/setup/", views.setup_printer, name="setup_printer"),
     path("users/", views.user_list, name="user_list"),
     path("users/create/", views.create_user, name="create_user"),
     path("users/<int:user_id>/update/", views.update_user, name="update_user"),

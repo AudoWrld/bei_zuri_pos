@@ -29,6 +29,11 @@ BeiZuri POS{% endblock %} {% block content %}
   </div>
 
   <div class="printer-grid">
+    <div class="printer-link" onclick="openSetupModal()">
+      <i class="bx bx-cog"></i>
+      <span>Setup Printer</span>
+    </div>
+
     <div class="printer-link" onclick="openTestModal()">
       <i class="bx bx-test-tube"></i>
       <span>Test Printer</span>
@@ -97,6 +102,35 @@ BeiZuri POS{% endblock %} {% block content %}
         <i class="bx bx-refresh"></i>
         Refresh Status
       </button>
+    </div>
+  </div>
+</div>
+
+<div id="setupModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">
+        <i class="bx bx-cog"></i>
+        <span>Setup Printer</span>
+      </div>
+      <button class="modal-close" onclick="closeSetupModal()">
+        <i class="bx bx-x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="setup-animation">
+        <i class="bx bx-printer printer-icon-large"></i>
+      </div>
+      <div class="setup-status" id="setupStatus">Setting up printer...</div>
+      <div class="setup-message" id="setupMessage">
+        Please wait while we detect and configure your thermal printer
+      </div>
+      <div class="setup-progress" id="setupProgress" style="display: none;">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">Initializing...</div>
+      </div>
     </div>
   </div>
 </div>
@@ -311,6 +345,88 @@ BeiZuri POS{% endblock %} {% block content %}
       });
   }
 
+  function openSetupModal() {
+    const statusEl = document.getElementById("setupStatus");
+    const messageEl = document.getElementById("setupMessage");
+    const progressEl = document.getElementById("setupProgress");
+
+    statusEl.textContent = "Setting up printer...";
+    statusEl.style.color = "#2c3e50";
+    messageEl.textContent = "Please wait while we detect and configure your thermal printer";
+    progressEl.style.display = "none";
+
+    document.getElementById("setupModal").classList.add("active");
+    setupPrinter();
+  }
+
+  function closeSetupModal() {
+    document.getElementById("setupModal").classList.remove("active");
+  }
+
+  function setupPrinter() {
+    const statusEl = document.getElementById("setupStatus");
+    const messageEl = document.getElementById("setupMessage");
+    const progressEl = document.getElementById("setupProgress");
+    const progressFill = document.getElementById("progressFill");
+    const progressText = document.getElementById("progressText");
+
+    progressEl.style.display = "block";
+
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+      progress += Math.random() * 15;
+      if (progress > 90) progress = 90;
+      progressFill.style.width = progress + "%";
+      progressText.textContent = `Setting up... ${Math.round(progress)}%`;
+    }, 500);
+
+    fetch("{% url 'settings:setup_printer' %}", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": csrftoken,
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => {
+        clearInterval(progressInterval);
+        progressFill.style.width = "100%";
+        progressText.textContent = "Complete!";
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        const statusEl = document.getElementById("setupStatus");
+        const messageEl = document.getElementById("setupMessage");
+
+        if (data.success) {
+          statusEl.textContent = "Setup Successful!";
+          statusEl.style.color = "#27ae60";
+          messageEl.textContent = data.message || "Your printer has been configured successfully!";
+          document.querySelector('.printer-icon-large').style.animation = 'none';
+          setTimeout(() => {
+            closeSetupModal();
+            location.reload();
+          }, 3000);
+        } else {
+          statusEl.textContent = "Setup Failed";
+          statusEl.style.color = "#e74c3c";
+          messageEl.textContent = data.error || "Unable to setup printer. Please check your printer connection.";
+          document.querySelector('.printer-icon-large').style.animation = 'none';
+        }
+      })
+      .catch((error) => {
+        clearInterval(progressInterval);
+        document.getElementById("setupStatus").textContent = "Connection Error";
+        document.getElementById("setupStatus").style.color = "#e74c3c";
+        document.getElementById("setupMessage").textContent =
+          error.message || "Unable to connect to the server";
+        progressEl.style.display = "none";
+      });
+  }
+
   function openConfigModal() {
     document.getElementById("configModal").classList.add("active");
   }
@@ -330,6 +446,12 @@ BeiZuri POS{% endblock %} {% block content %}
     });
 
   document
+    .getElementById("setupModal")
+    .addEventListener("click", function (e) {
+      if (e.target === this) closeSetupModal();
+    });
+
+  document
     .getElementById("configModal")
     .addEventListener("click", function (e) {
       if (e.target === this) closeConfigModal();
@@ -339,6 +461,7 @@ BeiZuri POS{% endblock %} {% block content %}
     if (e.key === "Escape") {
       closeTestModal();
       closeStatusModal();
+      closeSetupModal();
       closeConfigModal();
     }
   });

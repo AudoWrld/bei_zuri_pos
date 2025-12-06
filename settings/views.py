@@ -3,7 +3,11 @@ from users.models import User
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import SetPasswordForm
+from django.http import JsonResponse
 from .forms import CustomUserCreationForm, CustomUserChangeForm
+import subprocess
+import sys
+import os
 
 
 def can_manage_users(user):
@@ -20,6 +24,43 @@ def settings_home(request):
 @user_passes_test(can_manage_users)
 def printer_settings(request):
     return render(request, "settings/printer.html")
+
+
+@login_required
+@user_passes_test(can_manage_users)
+def setup_printer(request):
+    if request.method == "POST":
+        try:
+            setup_script = os.path.join(os.path.dirname(__file__), "../hardware/setup_printer.py")
+            result = subprocess.run([sys.executable, setup_script],
+                                  capture_output=True, text=True, timeout=60)
+
+            if result.returncode == 0:
+                return JsonResponse({
+                    "success": True,
+                    "message": "Printer setup completed successfully!"
+                })
+            else:
+                return JsonResponse({
+                    "success": False,
+                    "error": result.stderr or "Setup failed"
+                })
+
+        except subprocess.TimeoutExpired:
+            return JsonResponse({
+                "success": False,
+                "error": "Setup timed out. Please try again."
+            })
+        except Exception as e:
+            return JsonResponse({
+                "success": False,
+                "error": f"Setup failed: {str(e)}"
+            })
+
+    return JsonResponse({
+        "success": False,
+        "error": "Invalid request method"
+    })
 
 
 @login_required
