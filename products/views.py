@@ -11,6 +11,9 @@ import json
 
 @login_required
 def product_detail(request, slug):
+    if not request.user.can_edit_products():
+        raise PermissionDenied("You do not have permission to view product details.")
+
     product = get_object_or_404(Product, slug=slug)
     context = {
         "product": product,
@@ -138,6 +141,9 @@ def add_product(request):
 
 @login_required
 def stock_movements(request):
+    if not request.user.can_manage_inventory():
+        raise PermissionDenied("You do not have permission to view stock movements.")
+
     movements = StockMovement.objects.select_related('product').all()
 
     search_query = request.GET.get("search", "").strip()
@@ -192,6 +198,9 @@ def stock_movements(request):
 
 @login_required
 def category_list(request):
+    if not request.user.can_add_products():
+        raise PermissionDenied("You do not have permission to view categories.")
+
     categories = Category.objects.all()
     context = {
         "categories": categories,
@@ -243,6 +252,9 @@ def update_category(request, pk):
 
 @login_required
 def brand_list(request):
+    if not request.user.can_add_products():
+        raise PermissionDenied("You do not have permission to view brands.")
+
     brands = Brand.objects.all()
     context = {
         "brands": brands,

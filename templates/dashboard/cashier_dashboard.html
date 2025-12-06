@@ -1,9 +1,309 @@
-{% extends 'base.html' %} {% block title %}Beizuri POS - Dashboard{% endblock %}
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cashier Dashboard - BeiZuri{% endblock %}
+
 {% block content %}
-<div class="content-header">
-  <h1>Dashboard</h1>
+<style>
+    .dashboard-header {
+        margin-bottom: 20px;
+        padding: 0 0 20px 0;
+    }
+
+    .dashboard-header h1 {
+        color: #212529;
+        font-size: 32px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .dashboard-header p {
+        color: #6c757d;
+        font-size: 16px;
+        margin-bottom: 0;
+    }
+
+    .dashboard-row {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .dashboard-col {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .stat-card {
+        border-radius: 8px;
+        padding: 20px;
+        color: white;
+        min-height: 120px;
+        display: flex;
+        align-items: center;
+        width: 100%;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .stat-card:hover {
+       box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    }
+
+    .stat-card.bg-green { background-color: #28a745; }
+    .stat-card.bg-blue { background-color: #007bff; }
+    .stat-card.bg-orange { background-color: #fd7e14; }
+    .stat-card.bg-purple { background-color: #6f42c1; }
+
+    .stat-icon {
+        font-size: 48px;
+        margin-right: 20px;
+        opacity: 0.9;
+    }
+
+    .stat-info h6 {
+        text-transform: uppercase;
+        font-size: 12px;
+        margin-bottom: 5px;
+        font-weight: 600;
+    }
+
+    .stat-info h3 {
+        font-size: 28px;
+        margin-bottom: 4px;
+        font-weight: bold;
+    }
+
+    .stat-info small {
+        font-size: 12px;
+        opacity: 0.9;
+    }
+
+    .quick-actions {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    .quick-actions h3 {
+        color: #212529;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+
+    .action-buttons {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+    }
+
+    .action-btn {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #212529;
+        transition: all 0.15s ease;
+    }
+
+    .action-btn:hover {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+        box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+    }
+
+    .action-btn i {
+        font-size: 24px;
+        margin-right: 12px;
+    }
+
+    .recent-sales {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .recent-sales h3 {
+        color: #212529;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+
+    .sales-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .sale-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .sale-item:last-child {
+        border-bottom: none;
+    }
+
+    .sale-info {
+        flex: 1;
+    }
+
+    .sale-number {
+        font-weight: bold;
+        color: #007bff;
+        margin-bottom: 2px;
+    }
+
+    .sale-time {
+        font-size: 12px;
+        color: #6c757d;
+    }
+
+    .sale-amount {
+        font-weight: bold;
+        color: #28a745;
+        font-size: 16px;
+    }
+
+    .no-sales {
+        text-align: center;
+        padding: 40px;
+        color: #6c757d;
+    }
+
+    .no-sales i {
+        font-size: 48px;
+        margin-bottom: 15px;
+        display: block;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="dashboard-header">
+        <h1 id="greeting">Hello, {{ user.first_name }}</h1>
+        <p>Your cashier dashboard</p>
+    </div>
+
+    <script>
+        function updateGreeting() {
+            const now = new Date();
+            const hour = now.getHours();
+            const firstName = "{{ user.first_name }}";
+            let greeting;
+
+            if (hour >= 5 && hour < 12) {
+                greeting = `Good Morning, ${firstName}`;
+            } else if (hour >= 12 && hour < 17) {
+                greeting = `Good Afternoon, ${firstName}`;
+            } else if (hour >= 17 && hour < 22) {
+                greeting = `Good Evening, ${firstName}`;
+            } else {
+                greeting = `Good Night, ${firstName}`;
+            }
+
+            document.getElementById('greeting').textContent = greeting;
+        }
+
+        updateGreeting();
+    </script>
+
+    <div class="dashboard-row">
+        <div class="dashboard-col">
+            <div class="stat-card bg-green">
+                <i class="bx bx-trending-up stat-icon"></i>
+                <div class="stat-info">
+                    <h6>Today's Sales</h6>
+                    <h3>KSh {{ today_sales.total|default:0|floatformat:0 }}</h3>
+                    <small>{{ today_sales.count|default:0 }} transactions</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-col">
+            <div class="stat-card bg-blue">
+                <i class="bx bx-calendar stat-icon"></i>
+                <div class="stat-info">
+                    <h6>This Month</h6>
+                    <h3>KSh {{ month_sales.total|default:0|floatformat:0 }}</h3>
+                    <small>{{ month_sales.count|default:0 }} transactions</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-col">
+            <div class="stat-card bg-orange">
+                <i class="bx bx-time stat-icon"></i>
+                <div class="stat-info">
+                    <h6>Today's Returns</h6>
+                    <h3>{{ pending_returns }}</h3>
+                    <small>Processed today</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-col">
+            <div class="stat-card bg-purple">
+                <i class="bx bx-shopping-bag stat-icon"></i>
+                <div class="stat-info">
+                    <h6>Avg Transaction</h6>
+                    <h3>KSh {{ avg_transaction|floatformat:0 }}</h3>
+                    <small>Today</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="quick-actions">
+        <h3>Quick Actions</h3>
+        <div class="action-buttons">
+            <a href="{% url 'sales:new_sale' %}" class="action-btn">
+                <i class="bx bx-plus-circle"></i>
+                <span>New Sale</span>
+            </a>
+            <a href="{% url 'sales:history' %}" class="action-btn">
+                <i class="bx bx-history"></i>
+                <span>Sales History</span>
+            </a>
+            <a href="{% url 'sales:return_start' %}" class="action-btn">
+                <i class="bx bx-recycle"></i>
+                <span>Process Return</span>
+            </a>
+            <a href="{% url 'products:product_list' %}" class="action-btn">
+                <i class="bx bx-package"></i>
+                <span>View Products</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="recent-sales">
+        <h3>Recent Sales</h3>
+        <div class="sales-list">
+            {% if recent_sales %}
+                {% for sale in recent_sales %}
+                <div class="sale-item">
+                    <div class="sale-info">
+                        <div class="sale-number">{{ sale.sale_number }}</div>
+                        <div class="sale-time">{{ sale.completed_at|date:"M d, Y H:i" }}</div>
+                    </div>
+                    <div class="sale-amount">KSh {{ sale.final_amount|floatformat:0 }}</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-sales">
+                    <i class="bx bx-shopping-bag"></i>
+                    <h4>No Recent Sales</h4>
+                    <p>You haven't processed any sales yet today.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
 </div>
-
-<!-- Your content goes here -->
-
 {% endblock %}

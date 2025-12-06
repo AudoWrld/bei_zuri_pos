@@ -1,4 +1,6 @@
 from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.db.models import Sum, F, Q, DecimalField
 from django.db.models.functions import Coalesce
 from django.core.paginator import Paginator
@@ -8,7 +10,12 @@ from sales.models import Sale, SaleItem
 from decimal import Decimal
 
 
+@login_required
 def inventory_home(request):
+    if not request.user.can_manage_inventory():
+        raise PermissionDenied("You do not have permission to view inventory.")
+
+    today = timezone.now().date()
     today = timezone.now().date()
 
     total_products = Product.objects.filter(is_active=True).count()
@@ -136,7 +143,14 @@ def inventory_home(request):
     return render(request, "inventory/inventory_home.html", context)
 
 
+@login_required
 def low_stock_products(request):
+    if not request.user.can_manage_inventory():
+        raise PermissionDenied("You do not have permission to view inventory.")
+
+    products = Product.objects.filter(
+        is_active=True, quantity__lte=F("low_stock_threshold")
+    ).select_related("category", "brand")
     products = Product.objects.filter(
         is_active=True, quantity__lte=F("low_stock_threshold")
     ).select_related("category", "brand")
