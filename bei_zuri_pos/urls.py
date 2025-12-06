@@ -9,6 +9,7 @@ urlpatterns = [
     path("select2/", include("django_select2.urls")),
     path("", include("users.urls")),
     path("", include("dashboard.urls")),
+    path("", include("sync.urls")),
     path("products/", include("products.urls")),
     path("sales/", include("sales.urls")),
     path("payments/", include("payments.urls")),

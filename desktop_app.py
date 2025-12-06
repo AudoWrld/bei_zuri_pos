@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "bei_zuri_pos.settings")
+os.environ.setdefault("IS_DESKTOP", "True")
 
 
 def is_port_in_use(port):
@@ -23,6 +24,58 @@ def get_available_port():
     return port
 
 
+def needs_migration():
+    try:
+        from django.db import connection
+        from django.db.migrations.executor import MigrationExecutor
+
+        executor = MigrationExecutor(connection)
+        targets = executor.loader.graph.leaf_nodes()
+        plan = executor.migration_plan(targets)
+
+        return bool(plan)
+    except Exception as e:
+        print(f"Error checking migrations: {e}")
+        return True
+
+
+def run_migrations():
+    print("Checking for pending migrations...")
+    try:
+        if not needs_migration():
+            print("No migrations needed")
+            return True
+
+        print("Running database migrations...")
+        from django.core.management import call_command
+
+        call_command("migrate", interactive=False, verbosity=1)
+        print("Migrations completed successfully")
+        return True
+    except Exception as e:
+        print(f"Migration error: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return False
+
+
+def start_background_sync():
+    try:
+        from django.conf import settings
+
+        if settings.IS_DESKTOP and settings.ENABLE_SYNC:
+            from sync.background_sync import sync_service
+
+            print("Starting background sync service...")
+            sync_service.start()
+    except Exception as e:
+        print(f"Error starting background sync: {e}")
+        import traceback
+
+        traceback.print_exc()
+
+
 def start_django(port):
     if not is_port_in_use(port):
         try:
@@ -30,13 +83,22 @@ def start_django(port):
 
             django.setup()
 
+            if not run_migrations():
+                print("Warning: Migrations failed, continuing anyway...")
+
+            start_background_sync()
+
             from waitress import serve
             from django.core.wsgi import get_wsgi_application
 
             application = get_wsgi_application()
+            print(f"Starting server on port {port}...")
             serve(application, host="127.0.0.1", port=port, threads=4)
         except Exception as e:
             print(f"Error starting server: {e}")
+            import traceback
+
+            traceback.print_exc()
 
 
 def main():
@@ -49,6 +111,11 @@ def main():
         if is_port_in_use(port):
             break
         time.sleep(0.1)
+    else:
+        print("Failed to start Django server")
+        return
+
+    print(f"Server started on http://127.0.0.1:{port}")
 
     window = webview.create_window(
         "BeiZuri POS",

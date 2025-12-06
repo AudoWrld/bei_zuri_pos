@@ -92,6 +92,36 @@
         font-weight: 600;
     }
 
+    .delivery-tabs {
+        display: flex;
+        border-bottom: 1px solid #e9ecef;
+        margin-bottom: 20px;
+    }
+
+    .tab-button {
+        padding: 10px 20px;
+        border: none;
+        background: none;
+        cursor: pointer;
+        font-weight: 500;
+        color: #6c757d;
+        border-bottom: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+
+    .tab-button.active {
+        color: #007bff;
+        border-bottom-color: #007bff;
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
     .delivery-item {
         border: 1px solid #e9ecef;
         border-radius: 8px;
@@ -189,6 +219,19 @@
         updateGreeting();
     </script>
 
+    <script>
+        function showTab(tabName) {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => button.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+    </script>
+
     <div class="dashboard-row">
         <div class="dashboard-col">
             <div class="stat-card bg-blue">
@@ -236,48 +279,117 @@
     </div>
 
     <div class="deliveries-section">
-        <h3>Your Deliveries</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3>Your Deliveries</h3>
+            <a href="{% url 'delivery:delivery_history' %}" style="color: #007bff; text-decoration: none; font-weight: 500;">
+                <i class="bx bx-history"></i> View All History
+            </a>
+        </div>
 
-        {% if assigned_deliveries %}
-            {% for delivery in assigned_deliveries %}
-            <div class="delivery-item">
-                <div class="delivery-header">
-                    <span class="delivery-number">{{ delivery.delivery_number }}</span>
-                    <span class="delivery-status status-{{ delivery.status|lower|slugify }}">
-                        {{ delivery.get_status_display }}
-                    </span>
+        <div class="delivery-tabs">
+            <button class="tab-button active" onclick="showTab('current')">Current Deliveries</button>
+            <button class="tab-button" onclick="showTab('history')">Recent History</button>
+        </div>
+
+        <div id="current-tab" class="tab-content active">
+            {% if assigned_deliveries %}
+                {% for delivery in assigned_deliveries %}
+                <div class="delivery-item">
+                    <div class="delivery-header">
+                        <a href="{% url 'delivery:delivery_detail' delivery.id %}" class="delivery-number" style="text-decoration: none;">{{ delivery.delivery_number }}</a>
+                        <span class="delivery-status status-{{ delivery.status|lower|slugify }}">
+                            {{ delivery.get_status_display }}
+                        </span>
+                    </div>
+
+                    <div class="delivery-details">
+                        <div class="delivery-detail">
+                            <label>Sale Number</label>
+                            <span>{{ delivery.sale.sale_number }}</span>
+                        </div>
+
+                        <div class="delivery-detail">
+                            <label>Amount</label>
+                            <span>KSh {{ delivery.sale.final_amount|floatformat:2 }}</span>
+                        </div>
+
+                        <div class="delivery-detail">
+                            <label>Delivery Address</label>
+                            <span>{{ delivery.delivery_address }}</span>
+                        </div>
+
+                        <div class="delivery-detail">
+                            <label>Assigned At</label>
+                            <span>{{ delivery.assigned_at|date:"M d, Y H:i" }}</span>
+                        </div>
+
+                        {% if delivery.notes %}
+                        <div class="delivery-detail">
+                            <label>Notes</label>
+                            <span>{{ delivery.notes }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-deliveries">
+                    <i class='bx bx-package'></i>
+                    <h4>No Active Deliveries</h4>
+                    <p>You don't have any deliveries assigned at the moment.</p>
+                </div>
+            {% endif %}
+        </div>
 
-                <div class="delivery-details">
-                    <div class="delivery-detail">
-                        <label>Sale Number</label>
-                        <span>{{ delivery.sale.sale_number }}</span>
+        <div id="history-tab" class="tab-content">
+            {% if completed_deliveries %}
+                {% for delivery in completed_deliveries %}
+                <div class="delivery-item">
+                    <div class="delivery-header">
+                        <a href="{% url 'delivery:delivery_detail' delivery.id %}" class="delivery-number" style="text-decoration: none;">{{ delivery.delivery_number }}</a>
+                        <span class="delivery-status status-delivered">
+                            Delivered
+                        </span>
                     </div>
 
-                    <div class="delivery-detail">
-                        <label>Amount</label>
-                        <span>KSh {{ delivery.sale.final_amount|floatformat:2 }}</span>
-                    </div>
+                    <div class="delivery-details">
+                        <div class="delivery-detail">
+                            <label>Sale Number</label>
+                            <span>{{ delivery.sale.sale_number }}</span>
+                        </div>
 
-                    <div class="delivery-detail">
-                        <label>Delivery Address</label>
-                        <span>{{ delivery.delivery_address }}</span>
-                    </div>
+                        <div class="delivery-detail">
+                            <label>Amount</label>
+                            <span>KSh {{ delivery.sale.final_amount|floatformat:2 }}</span>
+                        </div>
 
-                    <div class="delivery-detail">
-                        <label>Assigned At</label>
-                        <span>{{ delivery.assigned_at|date:"M d, Y H:i" }}</span>
+                        <div class="delivery-detail">
+                            <label>Delivery Address</label>
+                            <span>{{ delivery.delivery_address }}</span>
+                        </div>
+
+                        <div class="delivery-detail">
+                            <label>Delivered At</label>
+                            <span>{{ delivery.delivered_at|date:"M d, Y H:i" }}</span>
+                        </div>
+
+                        {% if delivery.notes %}
+                        <div class="delivery-detail">
+                            <label>Notes</label>
+                            <span>{{ delivery.notes }}</span>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
-            </div>
-            {% endfor %}
-        {% else %}
-            <div class="no-deliveries">
-                <i class='bx bx-package'></i>
-                <h4>No Active Deliveries</h4>
-                <p>You don't have any deliveries assigned at the moment.</p>
-            </div>
-        {% endif %}
+                {% endfor %}
+            {% else %}
+                <div class="no-deliveries">
+                    <i class='bx bx-history'></i>
+                    <h4>No Delivery History</h4>
+                    <p>You haven't completed any deliveries yet.</p>
+                </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

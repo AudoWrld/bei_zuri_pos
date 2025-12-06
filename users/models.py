@@ -1,12 +1,12 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
+from django.conf import settings
 
 
 class UserManager(BaseUserManager):
     def create_user(self, username, email=None, password=None, **extra_fields):
         if not username:
             raise ValueError("The Username field must be set")
-
         email = self.normalize_email(email) if email else None
         user = self.model(username=username, email=email, **extra_fields)
         user.set_password(password)
@@ -17,12 +17,10 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("role", User.ADMIN)
-
         if extra_fields.get("is_staff") is not True:
             raise ValueError("Superuser must have is_staff=True.")
         if extra_fields.get("is_superuser") is not True:
             raise ValueError("Superuser must have is_superuser=True.")
-
         return self.create_user(username, email, password, **extra_fields)
 
 
@@ -41,19 +39,15 @@ class User(AbstractUser):
         (CUSTOMER, "Customer"),
     ]
 
-    role = models.CharField(
-        max_length=20,
-        choices=ROLE_CHOICES,
-        default=CUSTOMER,
-        help_text="User role in the POS system",
-    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=CUSTOMER)
+    phone_number = models.CharField(max_length=15, blank=True, null=True)
 
-    phone_number = models.CharField(
-        max_length=15, blank=True, null=True, help_text="Contact phone number"
-    )
+    server_id = models.IntegerField(unique=True, null=True, blank=True, db_index=True)
+    synced_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     objects = UserManager()
-
     REQUIRED_FIELDS = ["email", "first_name", "last_name", "phone_number"]
 
     class Meta:
@@ -63,6 +57,9 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.get_full_name() or self.username} ({self.get_role_display()})"
+
+    def is_synced_from_server(self):
+        return self.server_id is not None if settings.IS_DESKTOP else False
 
     def is_admin(self):
         return self.role == self.ADMIN

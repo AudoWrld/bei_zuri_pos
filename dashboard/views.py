@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Sum, Count
@@ -130,7 +130,7 @@ def delivery_dashboard(request):
     in_transit_deliveries = Delivery.objects.filter(
         delivery_guy=request.user, status="in_transit"
     ).count()
-    completed_deliveries = Delivery.objects.filter(
+    completed_count = Delivery.objects.filter(
         delivery_guy=request.user, status="delivered"
     ).count()
 
@@ -141,10 +141,12 @@ def delivery_dashboard(request):
             "total": total_deliveries,
             "pending": pending_deliveries,
             "in_transit": in_transit_deliveries,
-            "completed": completed_deliveries,
+            "completed": completed_count,
         },
     }
     return render(request, "dashboard/delivery_dashboard.html", context)
+
+
 
 
 @login_required(login_url="login_view")
