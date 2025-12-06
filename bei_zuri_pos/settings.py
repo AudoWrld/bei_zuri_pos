@@ -15,7 +15,8 @@ DEBUG = os.environ.get("DEBUG", "True") == "True"
 IS_DESKTOP = os.environ.get("IS_DESKTOP", "False") == "True"
 IS_VPS = not IS_DESKTOP
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()]
+
 
 CSRF_TRUSTED_ORIGINS = (
     os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
