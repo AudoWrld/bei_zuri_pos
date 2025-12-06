@@ -94,18 +94,32 @@
 
 <div class="container-fluid">
     <div class="dashboard-header">
-        {% now "H" as current_hour %}
-        {% if current_hour >= 5 and current_hour < 12 %}
-        <h1>Good Morning, {{ user.first_name }}</h1>
-        {% elif current_hour >= 12 and current_hour < 17 %}
-        <h1>Good Afternoon, {{ user.first_name }}</h1>
-        {% elif current_hour >= 17 and current_hour < 22 %}
-        <h1>Good Evening, {{ user.first_name }}</h1>
-        {% else %}
-        <h1>Good Night, {{ user.first_name }}</h1>
-        {% endif %}
+        <h1 id="greeting">Hello, {{ user.first_name }}</h1>
         <p>Welcome to your dashboard</p>
     </div>
+
+    <script>
+        function updateGreeting() {
+            const now = new Date();
+            const hour = now.getHours();
+            const firstName = "{{ user.first_name }}";
+            let greeting;
+
+            if (hour >= 5 && hour < 12) {
+                greeting = `Good Morning, ${firstName}`;
+            } else if (hour >= 12 && hour < 17) {
+                greeting = `Good Afternoon, ${firstName}`;
+            } else if (hour >= 17 && hour < 22) {
+                greeting = `Good Evening, ${firstName}`;
+            } else {
+                greeting = `Good Night, ${firstName}`;
+            }
+
+            document.getElementById('greeting').textContent = greeting;
+        }
+
+        updateGreeting();
+    </script>
 
     <div class="dashboard-row">
         <div class="dashboard-col">
@@ -181,7 +195,7 @@
                 <i class='bx bxs-truck stat-icon'></i>
                 <div class="stat-info">
                     <h6>Delivery Guys</h6>
-                    <h3>1</h3>
+                    <h3>{{ delivery_guys_count }}</h3>
                     <small><a href="{% url 'settings:create_user' %}">New Delivery Guy</a></small>
                 </div>
             </div>
@@ -192,7 +206,7 @@
                 <i class="bx bx-group stat-icon"></i>
                 <div class="stat-info">
                     <h6>Customers</h6>
-                    <h3>1</h3>
+                    <h3>{{ customers_count }}</h3>
                     <small>Total Customers</small>
                 </div>
             </div>

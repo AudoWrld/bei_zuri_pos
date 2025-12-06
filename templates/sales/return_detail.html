@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}Return Details - {{ return_obj.return_number }}{% endblock %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/products/product_details.css' %}?v={{ STATIC_VERSION }}">
+<link rel="stylesheet" href="{% static 'css/sales/sale_details.css' %}?v={{ STATIC_VERSION }}">
+<div class="page-header">
+  <div class="header-content">
+    <div>
+      <h1>Return #{{ return_obj.return_number }}</h1>
+      <p class="product-sku">Processed on {{ return_obj.created_at|date:"M d, Y H:i" }}</p>
+    </div>
+    <div>
+      <a href="{% url 'sales:returns_history' %}" class="btn btn-secondary">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Back to History
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="product-detail">
+  <div class="product-status-bar">
+    <div class="status-item">
+      <span class="status-label">Status</span>
+      <span class="status-badge status-active">Processed</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Items</span>
+      <span class="status-value">{{ return_items.count }} items</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Return Amount</span>
+      <span class="status-value">KSh {{ return_obj.total_return_amount }}</span>
+    </div>
+  </div>
+
+  <div class="product-grid">
+    <div class="product-card">
+      <div class="card-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 2C5.58172 2 2 5.58172 2 10C2 14.4183 5.58172 18 10 18C14.4183 18 18 14.4183 18 10C18 5.58172 14.4183 2 10 2Z" stroke="#00bcd4" stroke-width="1.5"/>
+          <path d="M10 6V10L13 13" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <h3>Return Information</h3>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <span class="info-label">Return Number</span>
+          <span class="info-value info-code">{{ return_obj.return_number }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Sale Number</span>
+          <span class="info-value">{{ return_obj.sale.sale_number }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Cashier</span>
+          <span class="info-value">{{ return_obj.cashier.get_full_name|default:return_obj.cashier.username }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Notes</span>
+          <span class="info-value">{{ return_obj.notes|default:"-" }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="card-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="10" cy="10" r="7" stroke="#00bcd4" stroke-width="1.5"/>
+          <path d="M10 6V10H14" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h3>Timestamps</h3>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <span class="info-label">Processed At</span>
+          <span class="info-value">{{ return_obj.created_at|date:"M d, Y H:i:s" }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Sale Date</span>
+          <span class="info-value">{{ return_obj.sale.completed_at|date:"M d, Y H:i:s" }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="card-header">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10C17 13.866 13.866 17 10 17" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M10 7V10L12 12" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M2 14L4 16L7 13" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h3>Totals</h3>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <span class="info-label">Return Amount</span>
+          <span class="info-value info-highlight">KSh {{ return_obj.total_return_amount }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Items Returned</span>
+          <span class="info-value">{{ return_items.count }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="product-card full-width">
+    <div class="card-header">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="4" width="16" height="13" rx="1" stroke="#00bcd4" stroke-width="1.5"/>
+        <path d="M6 4V2M14 4V2M2 8H18" stroke="#00bcd4" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <h3>Items Returned</h3>
+    </div>
+    <div class="card-body">
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>SKU</th>
+              <th>Quantity Returned</th>
+              <th>Reason</th>
+              <th>Unit Price</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in return_items %}
+            <tr>
+              <td>{{ item.sale_item.product.name }}</td>
+              <td>{{ item.sale_item.product.sku }}</td>
+              <td>{{ item.quantity }}</td>
+              <td>{{ item.get_return_reason_display }}</td>
+              <td>KSh {{ item.unit_price }}</td>
+              <td>KSh {{ item.total_price }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="5" class="total-label">Total Return Amount:</td>
+              <td class="total-value">KSh {{ return_obj.total_return_amount }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

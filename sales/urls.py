@@ -21,6 +21,8 @@ urlpatterns = [
     path("return/", views.return_start, name="return_start"),
     path("return/<int:sale_id>/", views.return_process, name="return_process"),
     path("return/confirm/", views.return_confirm, name="return_confirm"),
+    path("returns/history/", views.returns_history, name="returns_history"),
+    path("return/<int:return_id>/detail/", views.return_detail, name="return_detail"),
     path(
         "return/search-product/", views.search_sale_product, name="search_sale_product"
     ),

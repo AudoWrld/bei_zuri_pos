@@ -1447,6 +1447,82 @@ def get_delivery_guys(request):
 
 
 @login_required
+def returns_history(request):
+    if not request.user.can_process_sales():
+        raise PermissionDenied("You do not have permission to view returns history.")
+
+    returns = Return.objects.select_related("sale", "cashier").prefetch_related("items")
+
+    search_query = request.GET.get("search", "").strip()
+    if search_query:
+        returns = returns.filter(
+            Q(return_number__icontains=search_query)
+            | Q(sale__sale_number__icontains=search_query)
+            | Q(cashier__username__icontains=search_query)
+        )
+
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
+    sort_by = request.GET.get("sort", "-created_at")
+
+    valid_sort_fields = [
+        "return_number",
+        "-return_number",
+        "sale__sale_number",
+        "-sale__sale_number",
+        "cashier__username",
+        "-cashier__username",
+        "total_return_amount",
+        "-total_return_amount",
+        "created_at",
+        "-created_at",
+    ]
+
+    if sort_by not in valid_sort_fields:
+        sort_by = "-created_at"
+
+    if start_date and start_date != "None":
+        returns = returns.filter(created_at__date__gte=start_date)
+    if end_date and end_date != "None":
+        returns = returns.filter(created_at__date__lte=end_date)
+
+    returns = returns.order_by(sort_by)
+
+    paginator = Paginator(returns, 15)
+    page_number = request.GET.get("page", 1)
+    try:
+        page_number = int(page_number)
+        if page_number < 1:
+            page_number = 1
+    except ValueError:
+        page_number = 1
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        "page_obj": page_obj,
+        "start_date": start_date,
+        "end_date": end_date,
+        "current_sort": sort_by,
+        "search_query": search_query,
+    }
+    return render(request, "sales/returns_history.html", context)
+
+
+@login_required
+def return_detail(request, return_id):
+    if not request.user.can_process_sales():
+        raise PermissionDenied("You do not have permission to view return details.")
+
+    return_obj = get_object_or_404(Return, id=return_id)
+    return_items = ReturnItem.objects.filter(return_fk=return_obj).select_related("sale_item__product")
+    context = {
+        "return_obj": return_obj,
+        "return_items": return_items,
+    }
+    return render(request, "sales/return_detail.html", context)
+
+
+@login_required
 def search_sale_product(request):
     if not request.user.can_process_sales():
         return JsonResponse({"success": False, "error": "Permission denied"})

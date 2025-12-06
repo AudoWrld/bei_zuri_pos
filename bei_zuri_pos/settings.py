@@ -124,7 +124,6 @@ AUTH_USER_MODEL = "users.User"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/users/login/"
 
-PRINT_SERVER_URL = "http://localhost:8080"
 
 RECEIPT_BASE_URL = "https://0d8cbb2700c2.ngrok-free.app"
 
