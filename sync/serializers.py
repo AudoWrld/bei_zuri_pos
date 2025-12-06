@@ -16,6 +16,8 @@ class UserSerializer(serializers.ModelSerializer):
             "role",
             "phone_number",
             "is_active",
+            "is_staff",
+            "is_superuser",
             "created_at",
             "updated_at",
             "password",
