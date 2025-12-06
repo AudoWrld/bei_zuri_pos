@@ -7,11 +7,15 @@ from django.db.models import Q
 from .models import Product, Category, Brand, StockMovement
 from .forms import ProductForm, CategoryForm, BrandForm, Barcode
 import json
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.views.decorators.http import require_POST
+from hardware.thermal_printer import print_barcodes
 
 
 @login_required
 def product_detail(request, slug):
-    if not request.user.can_edit_products():
+    if not request.user.can_view_products():
         raise PermissionDenied("You do not have permission to view product details.")
 
     product = get_object_or_404(Product, slug=slug)
@@ -144,14 +148,14 @@ def stock_movements(request):
     if not request.user.can_manage_inventory():
         raise PermissionDenied("You do not have permission to view stock movements.")
 
-    movements = StockMovement.objects.select_related('product').all()
+    movements = StockMovement.objects.select_related("product").all()
 
     search_query = request.GET.get("search", "").strip()
     if search_query:
         movements = movements.filter(
-            Q(product__name__icontains=search_query) |
-            Q(movement_type__icontains=search_query) |
-            Q(notes__icontains=search_query)
+            Q(product__name__icontains=search_query)
+            | Q(movement_type__icontains=search_query)
+            | Q(notes__icontains=search_query)
         )
 
     movement_type = request.GET.get("movement_type")
@@ -401,3 +405,40 @@ def add_stock(request, pk):
         else:
             messages.error(request, "Quantity must be greater than 0.")
     return redirect("products:product_list")
+
+
+@login_required
+@require_POST
+def print_barcode(request):
+    if not request.user.can_view_products():
+        raise PermissionDenied("You do not have permission to print barcodes.")
+
+    try:
+        barcode = request.POST.get("barcode", "").strip()
+        quantity = int(request.POST.get("quantity", 1))
+
+        if not barcode:
+            messages.error(request, "Barcode is required")
+            return redirect(request.META.get("HTTP_REFERER", "products:product_list"))
+
+        if quantity < 1:
+            messages.error(request, "Quantity must be at least 1")
+            return redirect(request.META.get("HTTP_REFERER", "products:product_list"))
+
+        if len(barcode) != 13:
+            messages.error(request, "Barcode must be 13 digits")
+            return redirect(request.META.get("HTTP_REFERER", "products:product_list"))
+
+        success, message = print_barcodes(barcode, quantity)
+
+        if success:
+            messages.success(request, message)
+        else:
+            messages.error(request, f"Print failed: {message}")
+
+    except ValueError:
+        messages.error(request, "Invalid quantity provided")
+    except Exception as e:
+        messages.error(request, f"Error printing barcode: {str(e)}")
+
+    return redirect(request.META.get("HTTP_REFERER", "products:product_list"))

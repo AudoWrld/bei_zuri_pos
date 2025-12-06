@@ -15,7 +15,6 @@ urlpatterns = [
     path("brands/add/", views.add_brand, name="add_brand"),
     path("brands/update/<int:pk>/", views.update_brand, name="update_brand"),
     path("movements/", views.stock_movements, name="stock_movements"),
+    path("print-barcode/", views.print_barcode, name="print_barcode"),
     path("<slug:slug>/", views.product_detail, name="product_detail"),
-
 ]
- 

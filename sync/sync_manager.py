@@ -103,12 +103,10 @@ class SyncManager:
                 return True
 
             with transaction.atomic():
-                self._sync_categories(data.get("categories", []), check_deletions=True)
-                self._sync_brands(data.get("brands", []), check_deletions=True)
-                self._sync_products(
-                    data.get("products", []), update_mode=True, check_deletions=True
-                )
-                self._sync_users(data.get("users", []), check_deletions=True)
+                self._sync_categories(data.get("categories", []))
+                self._sync_brands(data.get("brands", []))
+                self._sync_products(data.get("products", []), update_mode=True)
+                self._sync_users(data.get("users", []))
 
                 total_records = (
                     len(data.get("categories", []))
@@ -197,6 +195,7 @@ class SyncManager:
                                 server_id=item_data["product_id"]
                             ).first()
                             if not product:
+                                print(f"Product not found: {item_data['product_id']}")
                                 continue
 
                             SaleItem.objects.create(
@@ -208,11 +207,22 @@ class SyncManager:
                                 total_amount=item_data["total_amount"],
                             )
 
+                            product.quantity -= item_data["quantity"]
+                            product.sold_count += item_data["quantity"]
+                            product.save(update_fields=["quantity", "sold_count"])
+
+                            print(
+                                f"    Reduced stock: {product.name} by {item_data['quantity']} (now {product.quantity})"
+                            )
+
                         synced_count += 1
                         print(f"  Pulled sale: {sale.sale_number}")
 
                     except Exception as e:
                         print(f"Error pulling sale {sale_data.get('sale_number')}: {e}")
+                        import traceback
+
+                        traceback.print_exc()
                         continue
 
                 SyncLog.objects.create(
@@ -291,6 +301,9 @@ class SyncManager:
                             ).first()
 
                             if not sale_item:
+                                print(
+                                    f"Sale item not found for product: {item_data['product_id']}"
+                                )
                                 continue
 
                             ReturnItem.objects.create(
@@ -302,6 +315,15 @@ class SyncManager:
                                 total_price=item_data["total_price"],
                             )
 
+                            product = sale_item.product
+                            product.quantity += item_data["quantity"]
+                            product.sold_count -= item_data["quantity"]
+                            product.save(update_fields=["quantity", "sold_count"])
+
+                            print(
+                                f"    Restored stock: {product.name} by {item_data['quantity']} (now {product.quantity})"
+                            )
+
                         synced_count += 1
                         print(f"  Pulled return: {return_obj.return_number}")
 
@@ -309,6 +331,9 @@ class SyncManager:
                         print(
                             f"Error pulling return {return_data.get('return_number')}: {e}"
                         )
+                        import traceback
+
+                        traceback.print_exc()
                         continue
 
                 SyncLog.objects.create(
@@ -509,26 +534,13 @@ class SyncManager:
             )
             return False
 
-    def _sync_categories(self, categories_data, check_deletions=False):
+    def _sync_categories(self, categories_data):
         try:
             if not categories_data:
                 return
 
             synced_count = 0
             error_count = 0
-            deleted_count = 0
-
-            if check_deletions:
-                server_ids = [cat["id"] for cat in categories_data]
-                local_categories = Category.objects.filter(server_id__isnull=False)
-
-                for category in local_categories:
-                    if category.server_id not in server_ids:
-                        print(
-                            f"  Deleting: Category {category.name} (removed from server)"
-                        )
-                        category.delete()
-                        deleted_count += 1
 
             for category_data in categories_data:
                 try:
@@ -553,10 +565,8 @@ class SyncManager:
                         f"  Error syncing category {category_data.get('name', 'unknown')}: {e}"
                     )
 
-            if synced_count > 0 or deleted_count > 0:
-                print(
-                    f"Synced {synced_count} categories, {deleted_count} deleted, {error_count} errors"
-                )
+            if synced_count > 0:
+                print(f"Synced {synced_count} categories, {error_count} errors")
         except Exception as e:
             print(f"Sync categories error: {e}")
             import traceback
@@ -564,24 +574,13 @@ class SyncManager:
             traceback.print_exc()
             raise
 
-    def _sync_brands(self, brands_data, check_deletions=False):
+    def _sync_brands(self, brands_data):
         try:
             if not brands_data:
                 return
 
             synced_count = 0
             error_count = 0
-            deleted_count = 0
-
-            if check_deletions:
-                server_ids = [brand["id"] for brand in brands_data]
-                local_brands = Brand.objects.filter(server_id__isnull=False)
-
-                for brand in local_brands:
-                    if brand.server_id not in server_ids:
-                        print(f"  Deleting: Brand {brand.name} (removed from server)")
-                        brand.delete()
-                        deleted_count += 1
 
             for brand_data in brands_data:
                 try:
@@ -606,10 +605,8 @@ class SyncManager:
                         f"  Error syncing brand {brand_data.get('name', 'unknown')}: {e}"
                     )
 
-            if synced_count > 0 or deleted_count > 0:
-                print(
-                    f"Synced {synced_count} brands, {deleted_count} deleted, {error_count} errors"
-                )
+            if synced_count > 0:
+                print(f"Synced {synced_count} brands, {error_count} errors")
         except Exception as e:
             print(f"Sync brands error: {e}")
             import traceback
@@ -617,45 +614,19 @@ class SyncManager:
             traceback.print_exc()
             raise
 
-    def _sync_products(self, products_data, update_mode=False, check_deletions=False):
+    def _sync_products(self, products_data, update_mode=False):
         try:
             if not products_data:
                 return
 
             synced_count = 0
             error_count = 0
-            deleted_count = 0
-
-            if check_deletions:
-                server_ids = [prod["id"] for prod in products_data]
-                local_products = Product.objects.filter(server_id__isnull=False)
-
-                for product in local_products:
-                    if product.server_id not in server_ids:
-                        print(
-                            f"  Deleting: Product {product.name} (removed from server)"
-                        )
-                        product.delete()
-                        deleted_count += 1
 
             for product_data in products_data:
                 try:
                     existing_product = Product.objects.filter(
                         server_id=product_data["id"]
                     ).first()
-
-                    if update_mode and existing_product:
-                        if existing_product.quantity != product_data["quantity"]:
-                            print(
-                                f"  Warning: Stock mismatch for {product_data['name']}"
-                            )
-                            print(
-                                f"    Local: {existing_product.quantity}, Server: {product_data['quantity']}"
-                            )
-                            print(f"    Keeping local stock, syncing other fields only")
-
-                            product_data["quantity"] = existing_product.quantity
-                            product_data["sold_count"] = existing_product.sold_count
 
                     category = None
                     if product_data.get("category_id"):
@@ -688,22 +659,53 @@ class SyncManager:
                         "synced_at": timezone.now(),
                     }
 
+                    if update_mode and existing_product:
+                        if existing_product.quantity != product_data["quantity"]:
+                            print(
+                                f"  Stock conflict for {product_data['name']}: Local={existing_product.quantity}, Server={product_data['quantity']}"
+                            )
+
+                            unsynced_sales_qty = (
+                                SaleItem.objects.filter(
+                                    product=existing_product,
+                                    sale__synced_at__isnull=True,
+                                    sale__completed_at__isnull=False,
+                                ).aggregate(total=models.Sum("quantity"))["total"]
+                                or 0
+                            )
+
+                            unsynced_returns_qty = (
+                                ReturnItem.objects.filter(
+                                    sale_item__product=existing_product,
+                                    return_fk__synced_at__isnull=True,
+                                ).aggregate(total=models.Sum("quantity"))["total"]
+                                or 0
+                            )
+
+                            expected_local = (
+                                product_data["quantity"]
+                                - unsynced_sales_qty
+                                + unsynced_returns_qty
+                            )
+
+                            if existing_product.quantity == expected_local:
+                                print(
+                                    f"    Stock matches (accounting for unsynced transactions)"
+                                )
+                                defaults["quantity"] = existing_product.quantity
+                                defaults["sold_count"] = existing_product.sold_count
+                            else:
+                                print(f"    WARNING: Unexplained stock difference!")
+                                print(
+                                    f"    Expected: {expected_local}, Actual: {existing_product.quantity}"
+                                )
+                                print(
+                                    f"    Using server stock: {product_data['quantity']}"
+                                )
+
                     product, created = Product.objects.update_or_create(
                         server_id=product_data["id"], defaults=defaults
                     )
-
-                    if check_deletions:
-                        server_barcode_ids = [
-                            b["id"] for b in product_data.get("barcodes", [])
-                        ]
-                        local_barcodes = Barcode.objects.filter(
-                            product=product, server_id__isnull=False
-                        )
-
-                        for barcode in local_barcodes:
-                            if barcode.server_id not in server_barcode_ids:
-                                print(f"    Deleting barcode: {barcode.barcode}")
-                                barcode.delete()
 
                     for barcode_data in product_data.get("barcodes", []):
                         Barcode.objects.update_or_create(
@@ -729,10 +731,8 @@ class SyncManager:
 
                     traceback.print_exc()
 
-            if synced_count > 0 or deleted_count > 0:
-                print(
-                    f"Synced {synced_count} products, {deleted_count} deleted, {error_count} errors"
-                )
+            if synced_count > 0:
+                print(f"Synced {synced_count} products, {error_count} errors")
         except Exception as e:
             print(f"Sync products error: {e}")
             import traceback
@@ -740,24 +740,13 @@ class SyncManager:
             traceback.print_exc()
             raise
 
-    def _sync_users(self, users_data, check_deletions=False):
+    def _sync_users(self, users_data):
         try:
             if not users_data:
                 return
 
             synced_count = 0
             error_count = 0
-            deleted_count = 0
-
-            if check_deletions:
-                server_ids = [user["id"] for user in users_data]
-                local_users = User.objects.filter(server_id__isnull=False)
-
-                for user in local_users:
-                    if user.server_id not in server_ids:
-                        print(f"  Deleting: User {user.username} (removed from server)")
-                        user.delete()
-                        deleted_count += 1
 
             for user_data in users_data:
                 try:
@@ -795,10 +784,8 @@ class SyncManager:
                         f"  Error syncing user {user_data.get('username', 'unknown')}: {e}"
                     )
 
-            if synced_count > 0 or deleted_count > 0:
-                print(
-                    f"Synced {synced_count} users, {deleted_count} deleted, {error_count} errors"
-                )
+            if synced_count > 0:
+                print(f"Synced {synced_count} users, {error_count} errors")
         except Exception as e:
             print(f"Sync users error: {e}")
             import traceback

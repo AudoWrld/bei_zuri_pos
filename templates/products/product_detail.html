@@ -234,13 +234,15 @@
       Add Stock
     </a>
     {% endif %}
-    <a href="#" class="btn btn-info">
+    {% if request.user.can_view_products %}
+    <a href="#" class="btn btn-info" onclick="openPrintBarcodeModal('{{ product.barcode }}', '{{ product.name }}')">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M4 6H12M4 8H12M4 10H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
       </svg>
       Print Barcode
     </a>
+    {% endif %}
   </div>
 </div>
 
@@ -264,6 +266,33 @@
   </div>
 </div>
 
+<div id="printBarcodeModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Print Barcode for <span id="barcodeModalProductName"></span></h2>
+      <span class="close" onclick="closePrintBarcodeModal()">&times;</span>
+    </div>
+    <form id="printBarcodeForm" method="post" action="{% url 'products:print_barcode' %}">
+      {% csrf_token %}
+      <input type="hidden" id="barcodeNumber" name="barcode" value="">
+      <div class="form-group">
+        <label for="barcodeQuantity">Number of Barcodes to Print:</label>
+        <input type="number" id="barcodeQuantity" name="quantity" min="1" value="1" required>
+      </div>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 8px;">
+            <path d="M4 6H12M4 8H12M4 10H8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <rect x="2" y="2" width="12" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+          Print Barcode
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="closePrintBarcodeModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 function openAddStockModal(productId, productName) {
   document.getElementById('modalProductName').textContent = productName;
@@ -274,19 +303,38 @@ function openAddStockModal(productId, productName) {
 
 function closeAddStockModal() {
   document.getElementById('addStockModal').style.display = 'none';
-  document.body.style.overflow = 'none';
+  document.body.style.overflow = 'auto';
+}
+
+function openPrintBarcodeModal(barcode, productName) {
+  document.getElementById('barcodeModalProductName').textContent = productName;
+  document.getElementById('barcodeNumber').value = barcode;
+  document.getElementById('barcodeQuantity').value = 1;
+  document.getElementById('printBarcodeModal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closePrintBarcodeModal() {
+  document.getElementById('printBarcodeModal').style.display = 'none';
+  document.body.style.overflow = 'auto';
 }
 
 window.onclick = function(event) {
-  const modal = document.getElementById('addStockModal');
-  if (event.target == modal) {
+  const addStockModal = document.getElementById('addStockModal');
+  const printBarcodeModal = document.getElementById('printBarcodeModal');
+  
+  if (event.target == addStockModal) {
     closeAddStockModal();
+  }
+  if (event.target == printBarcodeModal) {
+    closePrintBarcodeModal();
   }
 }
 
 document.addEventListener('keydown', function(event) {
   if (event.key === 'Escape') {
     closeAddStockModal();
+    closePrintBarcodeModal();
   }
 });
 </script>
