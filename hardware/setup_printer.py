@@ -117,7 +117,7 @@ def save_config(vendor_id, product_id, endpoint, name):
     with open(config_path, "w") as f:
         json.dump(config, f, indent=2)
 
-    print(f"\n✓ Configuration saved to: {config_path}")
+    print(f"\n[OK] Configuration saved to: {config_path}")
 
 
 def main():
@@ -129,86 +129,68 @@ def main():
     printer_info, dev = detect_thermal_printer()
 
     if printer_info:
-        print(f"\n✓ Found: {printer_info['name']}")
+        print(f"\n[OK] Found: {printer_info['name']}")
         print(f"  Vendor ID:  {hex(printer_info['vendor_id'])}")
         print(f"  Product ID: {hex(printer_info['product_id'])}")
 
-        use_detected = input("\nUse this printer? [Y/n]: ").strip().lower()
+        # Automatically use detected printer
+        vendor_id = hex(printer_info["vendor_id"])
+        product_id = hex(printer_info["product_id"])
+        endpoint = find_printer_endpoint(dev)
+        printer_name = printer_info["name"]
 
-        if use_detected != "n":
-            vendor_id = hex(printer_info["vendor_id"])
-            product_id = hex(printer_info["product_id"])
-            endpoint = find_printer_endpoint(dev)
-            printer_name = printer_info["name"]
-
-            print(f"\n[2/3] Testing printer connection...")
-            success, message = test_print(vendor_id, product_id, endpoint)
-
-            if success:
-                print(f"✓ {message}")
-                print("\n[3/3] Saving configuration...")
-                save_config(vendor_id, product_id, endpoint, printer_name)
-                print("\n" + "=" * 70)
-                print("  Setup Complete!")
-                print("=" * 70)
-                print("\nYour thermal printer is now configured.")
-                print("You can now use it with your Django POS system.")
-                return
-            else:
-                print(f"✗ {message}")
-                print("\nFalling back to manual configuration...")
-
-    print("\n" + "=" * 70)
-    print("  Manual Printer Configuration")
-    print("=" * 70)
-
-    print("\nDetected USB devices:")
-    devices = find_all_usb_devices()
-
-    if not devices:
-        print("✗ No USB devices found!")
-        return
-
-    for i, dev in enumerate(devices, 1):
-        print(f"\n{i}. {dev['product']} ({dev['manufacturer']})")
-        print(f"   VID: {dev['vendor_id']}, PID: {dev['product_id']}")
-
-    print("\n" + "-" * 70)
-    choice = input("\nSelect your thermal printer number (or 'q' to quit): ").strip()
-
-    if choice.lower() == "q":
-        return
-
-    try:
-        idx = int(choice) - 1
-        selected = devices[idx]
-
-        vendor_id = selected["vendor_id"]
-        product_id = selected["product_id"]
-        endpoint = input(f"\nOUT Endpoint address (default 0x01): ").strip() or "0x01"
-        printer_name = (
-            input(f"Printer name (default '{selected['product']}'): ").strip()
-            or selected["product"]
-        )
-
-        print(f"\n[2/3] Testing printer...")
+        print(f"\n[2/3] Testing printer connection...")
         success, message = test_print(vendor_id, product_id, endpoint)
 
         if success:
-            print(f"✓ {message}")
+            print(f"[OK] {message}")
             print("\n[3/3] Saving configuration...")
             save_config(vendor_id, product_id, endpoint, printer_name)
             print("\n" + "=" * 70)
             print("  Setup Complete!")
             print("=" * 70)
+            print("\nYour thermal printer is now configured.")
+            print("You can now use it with your Django POS system.")
+            return
         else:
-            print(f"✗ {message}")
-            print("\nPlease check your printer connection and try again.")
+            print(f"[ERROR] {message}")
+            print("\n[ERROR] Printer test failed. Setup aborted.")
+            return
 
-    except (ValueError, IndexError):
-        print("✗ Invalid selection")
-    except Exception as e:
-        print(f"✗ Error: {str(e)}")
+    # If no known printer detected, try to find any USB device that might be a printer
+    print("\n[ERROR] No known thermal printer detected.")
+    print("\nScanning for USB devices...")
+    devices = find_all_usb_devices()
+
+    if not devices:
+        print("[ERROR] No USB devices found!")
+        return
+
+    # Try the first device as printer (assuming it's the printer)
+    selected = devices[0]
+    print(f"\n[OK] Using first USB device: {selected['product']} ({selected['manufacturer']})")
+    print(f"   VID: {selected['vendor_id']}, PID: {selected['product_id']}")
+
+    vendor_id = selected["vendor_id"]
+    product_id = selected["product_id"]
+    endpoint = "0x01"  # Default endpoint
+    printer_name = selected["product"]
+
+    print(f"\n[2/3] Testing printer...")
+    success, message = test_print(vendor_id, product_id, endpoint)
+
+    if success:
+        print(f"[OK] {message}")
+        print("\n[3/3] Saving configuration...")
+        save_config(vendor_id, product_id, endpoint, printer_name)
+        print("\n" + "=" * 70)
+        print("  Setup Complete!")
+        print("=" * 70)
+        print("\nYour thermal printer is now configured.")
+        print("You can now use it with your Django POS system.")
+    else:
+        print(f"[ERROR] {message}")
+        print("\n[ERROR] Setup failed. Please check your printer connection.")
 
 
 if __name__ == "__main__":
