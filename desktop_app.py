@@ -40,33 +40,32 @@ def start_django(port):
 
 
 def main():
-    splash_path = Path(__file__).parent / "templates" / "splash.html"
+    port = get_available_port()
+
+    server_thread = threading.Thread(target=start_django, args=(port,), daemon=True)
+    server_thread.start()
+
+    for i in range(30):
+        if is_port_in_use(port):
+            break
+        time.sleep(0.1)
 
     window = webview.create_window(
         "BeiZuri POS",
-        splash_path.as_uri(),
-        width=1480,
+        f"http://127.0.0.1:{port}/splash/",
+        width=1280,
         height=720,
-        min_size=(1480, 720),
+        min_size=(1280, 720),
         resizable=True,
         fullscreen=False,
         text_select=True,
     )
 
-    def start_app():
-        port = get_available_port()
-
-        server_thread = threading.Thread(target=start_django, args=(port,), daemon=True)
-        server_thread.start()
-
-        for i in range(30):
-            if is_port_in_use(port):
-                break
-            time.sleep(0.1)
-
+    def redirect_to_home():
+        time.sleep(2)
         window.load_url(f"http://127.0.0.1:{port}")
 
-    threading.Thread(target=start_app, daemon=True).start()
+    threading.Thread(target=redirect_to_home, daemon=True).start()
 
     webview.start()
 
