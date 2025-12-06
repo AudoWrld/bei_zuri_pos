@@ -11,8 +11,10 @@ class BackgroundSync:
         self.running = False
         self.thread = None
         self.sync_manager = None
+        self.initial_sync_done = False
 
     def start(self):
+        """Start the background sync service"""
         if (
             not settings.IS_DESKTOP
             or not settings.ENABLE_SYNC
@@ -21,15 +23,23 @@ class BackgroundSync:
             print("Sync disabled or not configured")
             return
 
-        if not self.running:
-            self.sync_manager = SyncManager()
-            self.running = True
-            self.thread = threading.Thread(target=self._sync_loop, daemon=True)
-            self.thread.start()
-            print(f"Background sync started (interval: {self.interval}s)")
+        if self.running:
+            print("Background sync already running")
+            return
+
+        print(f"Starting background sync service (interval: {self.interval}s)...")
+        self.running = True
+        self.sync_manager = SyncManager()
+        self.thread = threading.Thread(target=self._sync_loop, daemon=True)
+        self.thread.start()
+        print("Background sync service started")
 
     def stop(self):
+        """Stop the background sync service"""
         self.running = False
+        if self.thread and self.thread.is_alive():
+            print("Stopping background sync...")
+            self.thread.join(timeout=5)
         print("Background sync stopped")
 
     def sync_now(self):
@@ -42,65 +52,116 @@ class BackgroundSync:
                 return self.sync_manager.full_sync()
             except Exception as e:
                 print(f"Manual sync error: {e}")
+                import traceback
+
+                traceback.print_exc()
                 return False
         return False
 
     def _sync_loop(self):
-        first_run = True
+        """Main sync loop running in background thread"""
+        import django
+
+        try:
+            django.setup()
+        except:
+            pass
+
+        print(f"[{timezone.now().strftime('%H:%M:%S')}] Background sync loop started")
+
+        time.sleep(5)
 
         while self.running:
             try:
-                if first_run:
-                    print(
-                        f"[{timezone.now().strftime('%H:%M:%S')}] Checking for initial sync..."
-                    )
+                if not self.initial_sync_done:
                     from .models import SyncLog
 
                     if not SyncLog.objects.filter(
                         sync_type="initial", status="success"
                     ).exists():
-                        print("Running initial sync...")
-                        self.sync_manager.initial_setup()
-                    else:
-                        print("Initial sync already completed")
-
-                    if self.sync_manager.api.test_connection():
                         print(
-                            f"[{timezone.now().strftime('%H:%M:%S')}] Running first sync..."
+                            f"[{timezone.now().strftime('%H:%M:%S')}] Running initial sync..."
                         )
-                        self.sync_manager.full_sync()
+                        if self.sync_manager.initial_setup():
+                            self.initial_sync_done = True
+                            print(
+                                f"[{timezone.now().strftime('%H:%M:%S')}] Initial sync completed"
+                            )
+                        else:
+                            print(
+                                f"[{timezone.now().strftime('%H:%M:%S')}] Initial sync failed, will retry"
+                            )
+                            time.sleep(self.interval)
+                            continue
+                    else:
+                        self.initial_sync_done = True
+                        print(
+                            f"[{timezone.now().strftime('%H:%M:%S')}] Initial sync already completed"
+                        )
 
-                    first_run = False
-
-                time.sleep(self.interval)
-
-                if self.sync_manager.api.test_connection():
-                    print(
-                        f"[{timezone.now().strftime('%H:%M:%S')}] Running scheduled sync..."
-                    )
-
-                    self.sync_manager.push_sales_to_server()
-                    self.sync_manager.push_returns_to_server()
-
-                    self.sync_manager.pull_from_server()
-
-                    print(f"[{timezone.now().strftime('%H:%M:%S')}] ✓ Sync completed")
-                else:
+                if not self.sync_manager.api.test_connection():
                     print(
                         f"[{timezone.now().strftime('%H:%M:%S')}] Server unreachable, working offline"
                     )
+                    time.sleep(self.interval)
+                    continue
+
+                print(
+                    f"[{timezone.now().strftime('%H:%M:%S')}] Running scheduled sync..."
+                )
+
+                push_success = True
+                if not self.sync_manager.push_sales_to_server():
+                    push_success = False
+                    print(
+                        f"[{timezone.now().strftime('%H:%M:%S')}] ⚠ Failed to push sales"
+                    )
+
+                if not self.sync_manager.push_returns_to_server():
+                    push_success = False
+                    print(
+                        f"[{timezone.now().strftime('%H:%M:%S')}] ⚠ Failed to push returns"
+                    )
+
+                pull_success = True
+                if not self.sync_manager.pull_from_server():
+                    pull_success = False
+                    print(
+                        f"[{timezone.now().strftime('%H:%M:%S')}] ⚠ Failed to pull updates"
+                    )
+
+                if not self.sync_manager.pull_sales_from_server():
+                    pull_success = False
+                    print(
+                        f"[{timezone.now().strftime('%H:%M:%S')}] ⚠ Failed to pull sales"
+                    )
+
+                if not self.sync_manager.pull_returns_from_server():
+                    pull_success = False
+                    print(
+                        f"[{timezone.now().strftime('%H:%M:%S')}] ⚠ Failed to pull returns"
+                    )
+
+                if push_success and pull_success:
+                    print(
+                        f"[{timezone.now().strftime('%H:%M:%S')}] ✓ Sync completed successfully"
+                    )
+                else:
+                    print(
+                        f"[{timezone.now().strftime('%H:%M:%S')}] ⚠ Sync completed with errors"
+                    )
 
             except Exception as e:
-                print(f"Sync error: {e}")
+                print(f"[{timezone.now().strftime('%H:%M:%S')}] Sync error: {e}")
                 import traceback
 
                 traceback.print_exc()
 
+            time.sleep(self.interval)
+
+        print(f"[{timezone.now().strftime('%H:%M:%S')}] Background sync loop ended")
+
 
 sync_service = BackgroundSync(
-    interval=(
-        settings.SYNC_INTERVAL
-        if hasattr(settings, "SYNC_INTERVAL") and settings.IS_DESKTOP
-        else 30
-    )
+    interval=getattr(settings, "SYNC_INTERVAL", 30) if settings.IS_DESKTOP else 30
 )
