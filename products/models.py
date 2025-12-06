@@ -76,7 +76,7 @@ class Brand(models.Model):
 
 class Barcode(models.Model):
     barcode = models.CharField(
-        max_length=5,
+        max_length=25,
         unique=True,
         default=generate_barcode,
         editable=True,
