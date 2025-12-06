@@ -50,7 +50,9 @@ def generate_barcode():
     max_attempts = 50
 
     for _ in range(max_attempts):
-        base = "".join(random.choices(string.digits, k=12))
+        first_digit = random.choice(string.digits[1:])
+        rest_digits = "".join(random.choices(string.digits, k=11))
+        base = first_digit + rest_digits
         checksum = calculate_ean13_checksum(base)
         barcode = base + checksum
 
@@ -59,9 +61,11 @@ def generate_barcode():
         if not Barcode.objects.filter(barcode=barcode).exists():
             return barcode
 
-    import time
+    timestamp = str(int(timezone.now().timestamp()))[-12:]
 
-    timestamp = str(int(time.time() * 1000))[-12:]
+    if timestamp[0] == "0":
+        timestamp = "1" + timestamp[1:]
+
     checksum = calculate_ean13_checksum(timestamp)
     return timestamp + checksum
 
