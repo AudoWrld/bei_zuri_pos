@@ -20,6 +20,11 @@ urlpatterns = [
     path(
         "api/sync/push_sales/",
         SyncAPIViewSet.as_view({"post": "push_sales"}),
-        name="sync-push",
+        name="sync-push-sales",
+    ),
+    path(
+        "api/sync/push_returns/",
+        SyncAPIViewSet.as_view({"post": "push_returns"}),
+        name="sync-push-returns",
     ),
 ]
