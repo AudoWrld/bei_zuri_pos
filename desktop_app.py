@@ -24,36 +24,44 @@ def get_available_port():
     return port
 
 
-def needs_migration():
-    try:
-        from django.db import connection
-        from django.db.migrations.executor import MigrationExecutor
-
-        executor = MigrationExecutor(connection)
-        targets = executor.loader.graph.leaf_nodes()
-        plan = executor.migration_plan(targets)
-
-        return bool(plan)
-    except Exception as e:
-        print(f"Error checking migrations: {e}")
-        return True
-
-
 def run_migrations():
-    print("Checking for pending migrations...")
+    print("Running database migrations...")
     try:
-        if not needs_migration():
-            print("No migrations needed")
-            return True
-
-        print("Running database migrations...")
         from django.core.management import call_command
 
+        call_command("makemigrations", interactive=False, verbosity=1)
         call_command("migrate", interactive=False, verbosity=1)
         print("Migrations completed successfully")
         return True
     except Exception as e:
         print(f"Migration error: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return False
+
+
+def initial_sync():
+    try:
+        from sync.models import SyncLog
+        from sync.sync_manager import SyncManager
+
+        if SyncLog.objects.filter(sync_type="initial", status="success").exists():
+            print("Initial sync already completed, skipping...")
+            return True
+
+        print("Running initial sync from server...")
+        sync_manager = SyncManager()
+        result = sync_manager.initial_setup()
+
+        if result:
+            print("Initial sync completed successfully")
+        else:
+            print("Initial sync failed")
+
+        return result
+    except Exception as e:
+        print(f"Error during initial sync: {e}")
         import traceback
 
         traceback.print_exc()
@@ -85,6 +93,9 @@ def start_django(port):
 
             if not run_migrations():
                 print("Warning: Migrations failed, continuing anyway...")
+                return
+
+            initial_sync()
 
             start_background_sync()
 
@@ -101,35 +112,50 @@ def start_django(port):
             traceback.print_exc()
 
 
+def wait_for_server(port, timeout=120):
+    import requests
+
+    start_time = time.time()
+
+    while time.time() - start_time < timeout:
+        if is_port_in_use(port):
+            try:
+                response = requests.get(f"http://127.0.0.1:{port}/splash/", timeout=2)
+                if response.status_code == 200:
+                    return True
+            except:
+                pass
+        time.sleep(0.5)
+
+    return False
+
+
 def main():
     port = get_available_port()
 
     server_thread = threading.Thread(target=start_django, args=(port,), daemon=True)
     server_thread.start()
 
-    for i in range(30):
-        if is_port_in_use(port):
-            break
-        time.sleep(0.1)
-    else:
+    print("Waiting for server to be ready...")
+    if not wait_for_server(port, timeout=120):
         print("Failed to start Django server")
         return
 
-    print(f"Server started on http://127.0.0.1:{port}")
+    print(f"Server ready on http://127.0.0.1:{port}")
 
     window = webview.create_window(
         "BeiZuri POS",
         f"http://127.0.0.1:{port}/splash/",
         width=1480,
-        height=1040,
-        min_size=(1480, 1040),
+        height=720,
+        min_size=(1480, 720),
         resizable=True,
         fullscreen=False,
         text_select=True,
     )
 
     def redirect_to_home():
-        time.sleep(2)
+        time.sleep(3)
         window.load_url(f"http://127.0.0.1:{port}")
 
     threading.Thread(target=redirect_to_home, daemon=True).start()
