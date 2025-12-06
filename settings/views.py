@@ -23,7 +23,20 @@ def settings_home(request):
 @login_required
 @user_passes_test(can_manage_users)
 def printer_settings(request):
-    return render(request, "settings/printer.html")
+    import json
+    config_path = os.path.join(os.path.dirname(__file__), "../hardware/printer_config.json")
+    printer_configured = os.path.exists(config_path)
+    printer_config = None
+    if printer_configured:
+        try:
+            with open(config_path, 'r') as f:
+                printer_config = json.load(f)
+        except:
+            pass
+    return render(request, "settings/printer.html", {
+        "printer_configured": printer_configured,
+        "printer_config": printer_config
+    })
 
 
 @login_required

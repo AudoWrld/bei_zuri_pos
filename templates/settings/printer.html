@@ -148,29 +148,36 @@ BeiZuri POS{% endblock %} {% block content %}
     </div>
     <div class="modal-body">
       <div class="status-details">
+        {% if printer_config %}
         <div class="status-detail-item">
-          <span class="status-detail-label">Print Server URL:</span>
-          <span class="status-detail-value">http://localhost:8080</span>
+          <span class="status-detail-label">Printer Name:</span>
+          <span class="status-detail-value">{{ printer_config.name }}</span>
         </div>
         <div class="status-detail-item">
           <span class="status-detail-label">Vendor ID:</span>
-          <span class="status-detail-value">0x0483</span>
+          <span class="status-detail-value">{{ printer_config.vendor_id }}</span>
         </div>
         <div class="status-detail-item">
           <span class="status-detail-label">Product ID:</span>
-          <span class="status-detail-value">0x5743</span>
+          <span class="status-detail-value">{{ printer_config.product_id }}</span>
         </div>
         <div class="status-detail-item">
           <span class="status-detail-label">Endpoint:</span>
-          <span class="status-detail-value">0x01</span>
+          <span class="status-detail-value">{{ printer_config.out_endpoint }}</span>
         </div>
+        {% else %}
         <div class="status-detail-item">
-          <span class="status-detail-label">Paper Width:</span>
-          <span class="status-detail-value">48 characters</span>
+          <span class="status-detail-label">Status:</span>
+          <span class="status-detail-value">No configuration found</span>
         </div>
+        {% endif %}
       </div>
       <div class="test-message" style="margin-top: 20px; text-align: center">
+        {% if printer_config %}
         Configuration loaded from printer_config.json
+        {% else %}
+        No printer configuration available
+        {% endif %}
       </div>
     </div>
   </div>
@@ -233,7 +240,9 @@ BeiZuri POS{% endblock %} {% block content %}
           statusEl.style.color = "#27ae60";
           messageEl.textContent =
             data.message || "Your printer is working correctly";
-          document.querySelector('.printer-icon-large').style.animation = 'none';
+          const iconEl = document.querySelector('.printer-icon-large');
+          iconEl.style.animation = 'none';
+          iconEl.style.color = '#27ae60';
           setTimeout(() => {
             closeTestModal();
           }, 5000);
@@ -405,7 +414,9 @@ BeiZuri POS{% endblock %} {% block content %}
           statusEl.textContent = "Setup Successful!";
           statusEl.style.color = "#27ae60";
           messageEl.textContent = data.message || "Your printer has been configured successfully!";
-          document.querySelector('.printer-icon-large').style.animation = 'none';
+          const iconEl = document.querySelector('.printer-icon-large');
+          iconEl.style.animation = 'none';
+          iconEl.style.color = '#27ae60';
           setTimeout(() => {
             closeSetupModal();
             location.reload();
