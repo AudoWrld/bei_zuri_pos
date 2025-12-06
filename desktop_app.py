@@ -25,124 +25,128 @@ def get_available_port():
 
 
 def run_migrations():
+    """Run database migrations"""
     print("Running database migrations...")
     try:
         from django.core.management import call_command
 
         call_command("makemigrations", interactive=False, verbosity=1)
         call_command("migrate", interactive=False, verbosity=1)
-        print("Migrations completed successfully")
+        print("✓ Migrations completed successfully")
         return True
     except Exception as e:
-        print(f"Migration error: {e}")
+        print(f"✗ Migration error: {e}")
         import traceback
-
         traceback.print_exc()
         return False
 
 
-def initial_sync():
+def check_initial_sync_status():
+    """Check if initial sync has been completed"""
     try:
         from sync.models import SyncLog
-        from sync.sync_manager import SyncManager
-
-        if SyncLog.objects.filter(sync_type="initial", status="success").exists():
-            print("Initial sync already completed, skipping...")
-            return True
-
-        print("Running initial sync from server...")
-        sync_manager = SyncManager()
-        result = sync_manager.initial_setup()
-
-        if result:
-            print("Initial sync completed successfully")
-        else:
-            print("Initial sync failed")
-
-        return result
+        return SyncLog.objects.filter(sync_type="initial", status="success").exists()
     except Exception as e:
-        print(f"Error during initial sync: {e}")
-        import traceback
-
-        traceback.print_exc()
+        print(f"Error checking initial sync status: {e}")
         return False
 
 
 def start_background_sync():
+    """Start the background sync service"""
     try:
         from django.conf import settings
 
-        if settings.IS_DESKTOP and settings.ENABLE_SYNC:
-            from sync.background_sync import sync_service
+        if not settings.IS_DESKTOP or not settings.ENABLE_SYNC:
+            print("Sync is disabled in settings")
+            return
 
-            print("Starting background sync service...")
-            sync_service.start()
+        if not settings.SERVER_API_URL or not settings.SERVER_API_TOKEN:
+            print("⚠ Sync not configured - missing SERVER_API_URL or SERVER_API_TOKEN")
+            return
+
+        from sync.background_sync import sync_service
+
+        print("Initializing background sync service...")
+        sync_service.start()
+        print("✓ Background sync service initialized")
+        
     except Exception as e:
-        print(f"Error starting background sync: {e}")
+        print(f"✗ Error starting background sync: {e}")
         import traceback
-
         traceback.print_exc()
 
 
 def start_django(port):
+    """Start Django server"""
     if not is_port_in_use(port):
         try:
             import django
-
             django.setup()
 
+            # Run migrations
             if not run_migrations():
-                print("Warning: Migrations failed, continuing anyway...")
-                return
+                print("⚠ Warning: Migrations failed, continuing anyway...")
 
-            initial_sync()
-
+            # Start background sync (it will handle initial sync internally)
             start_background_sync()
 
+            # Start the WSGI server
             from waitress import serve
             from django.core.wsgi import get_wsgi_application
 
             application = get_wsgi_application()
-            print(f"Starting server on port {port}...")
+            print(f"Starting Django server on http://127.0.0.1:{port}")
             serve(application, host="127.0.0.1", port=port, threads=4)
+            
         except Exception as e:
-            print(f"Error starting server: {e}")
+            print(f"✗ Error starting Django server: {e}")
             import traceback
-
             traceback.print_exc()
 
 
 def wait_for_server(port, timeout=120):
+    """Wait for Django server to be ready"""
     import requests
 
     start_time = time.time()
+    print(f"Waiting for server to start on port {port}...")
 
     while time.time() - start_time < timeout:
         if is_port_in_use(port):
             try:
                 response = requests.get(f"http://127.0.0.1:{port}/splash/", timeout=2)
                 if response.status_code == 200:
+                    print(f"✓ Server is ready!")
                     return True
             except:
                 pass
         time.sleep(0.5)
 
+    print(f"✗ Server failed to start within {timeout} seconds")
     return False
 
 
 def main():
+    """Main entry point"""
+    print("=" * 60)
+    print("BeiZuri POS - Starting Application")
+    print("=" * 60)
+    
+    # Get available port
     port = get_available_port()
+    print(f"Using port: {port}")
 
+    # Start Django server in background thread
     server_thread = threading.Thread(target=start_django, args=(port,), daemon=True)
     server_thread.start()
 
-    print("Waiting for server to be ready...")
+    # Wait for server to be ready
     if not wait_for_server(port, timeout=120):
-        print("Failed to start Django server")
-        return
+        print("Failed to start Django server. Exiting...")
+        sys.exit(1)
 
-    print(f"Server ready on http://127.0.0.1:{port}")
-
+    # Create and start webview window
+    print("Creating application window...")
     window = webview.create_window(
         "BeiZuri POS",
         f"http://127.0.0.1:{port}/splash/",
@@ -155,12 +159,18 @@ def main():
     )
 
     def redirect_to_home():
+        """Redirect from splash screen to home after delay"""
         time.sleep(3)
         window.load_url(f"http://127.0.0.1:{port}")
 
+    # Start redirect thread
     threading.Thread(target=redirect_to_home, daemon=True).start()
 
+    # Start webview (blocking)
+    print("Starting webview...")
     webview.start()
+    
+    print("Application closed")
 
 
 if __name__ == "__main__":
