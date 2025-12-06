@@ -34,10 +34,36 @@ def calculate_ean13_checksum(code):
     return str(checksum)
 
 
+def validate_ean13(barcode):
+    if len(barcode) != 13:
+        return False
+
+    if not barcode.isdigit():
+        return False
+
+    calculated_checksum = calculate_ean13_checksum(barcode[:12])
+
+    return calculated_checksum == barcode[12]
+
+
 def generate_barcode():
-    base = "".join(random.choices(string.digits, k=12))
-    checksum = calculate_ean13_checksum(base)
-    return base + checksum
+    max_attempts = 50
+
+    for _ in range(max_attempts):
+        base = "".join(random.choices(string.digits, k=12))
+        checksum = calculate_ean13_checksum(base)
+        barcode = base + checksum
+
+        from products.models import Barcode
+
+        if not Barcode.objects.filter(barcode=barcode).exists():
+            return barcode
+
+    import time
+
+    timestamp = str(int(time.time() * 1000))[-12:]
+    checksum = calculate_ean13_checksum(timestamp)
+    return timestamp + checksum
 
 
 class Category(models.Model):
@@ -99,6 +125,15 @@ class Barcode(models.Model):
         indexes = [
             models.Index(fields=["barcode"]),
         ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        if self.barcode and len(self.barcode) == 13:
+            if not validate_ean13(self.barcode):
+                raise ValidationError(
+                    {"barcode": "Invalid EAN-13 barcode. Checksum does not match."}
+                )
 
     def __str__(self):
         return f"{self.barcode} - {self.product.name}"
