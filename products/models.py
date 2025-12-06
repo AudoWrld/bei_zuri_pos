@@ -63,6 +63,7 @@ class Brand(models.Model):
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     server_id = models.IntegerField(unique=True, null=True, blank=True, db_index=True)
     synced_at = models.DateTimeField(null=True, blank=True)

@@ -16,7 +16,15 @@ from .serializers import (
     ReturnSyncSerializer,
 )
 import traceback
+from django.views.decorators.http import require_http_methods
+from django.contrib.admin.views.decorators import staff_member_required
+from django.http import JsonResponse
+from sync.models import SyncLog
+from sync.background_sync import sync_service
+from sales.models import Sale, Return
+from django.conf import settings
 
+User = get_user_model()
 User = get_user_model()
 
 
@@ -149,6 +157,7 @@ class SyncAPIViewSet(viewsets.ViewSet):
             print(f"Pull returns error: {error_detail}")
             return Response({"error": str(e), "traceback": error_detail}, status=500)
 
+    @action(detail=False, methods=["post"])
     def initial_sync(self, request):
         """Initial sync - send all active data to POS"""
         try:
@@ -185,10 +194,15 @@ class SyncAPIViewSet(viewsets.ViewSet):
 
             users = User.objects.filter(updated_at__gte=since, is_active=True)
             categories = Category.objects.filter(updated_at__gte=since, is_active=True)
-            brands = Brand.objects.filter(is_active=True)
+            brands = Brand.objects.filter(updated_at__gte=since, is_active=True)
             products = Product.objects.filter(updated_at__gte=since, is_active=True)
 
-            has_updates = users.exists() or categories.exists() or products.exists()
+            has_updates = (
+                users.exists()
+                or categories.exists()
+                or brands.exists()
+                or products.exists()
+            )
 
             return Response(
                 {
@@ -344,7 +358,6 @@ class SyncAPIViewSet(viewsets.ViewSet):
                             error_count += 1
                             continue
 
-                        # Find sale
                         sale = Sale.objects.filter(
                             sale_number=return_data["sale_number"]
                         ).first()
@@ -361,7 +374,6 @@ class SyncAPIViewSet(viewsets.ViewSet):
                             error_count += 1
                             continue
 
-                        # Create or update return
                         return_obj, created = Return.objects.update_or_create(
                             return_number=return_data["return_number"],
                             defaults={
@@ -375,7 +387,6 @@ class SyncAPIViewSet(viewsets.ViewSet):
                             },
                         )
 
-                        # Process return items
                         for item_data in return_data.get("items", []):
                             sale_item = SaleItem.objects.filter(
                                 id=item_data["sale_item_id"]
@@ -432,3 +443,167 @@ class SyncAPIViewSet(viewsets.ViewSet):
                 {"success": False, "error": str(e), "traceback": error_detail},
                 status=500,
             )
+
+
+@staff_member_required
+@require_http_methods(["GET"])
+def sync_status(request):
+    """Comprehensive sync status endpoint"""
+    sync_running = sync_service.running if sync_service else False
+
+    recent_logs = SyncLog.objects.all()[:10]
+    logs_data = []
+    for log in recent_logs:
+        logs_data.append(
+            {
+                "type": log.sync_type,
+                "status": log.status,
+                "records": log.records_count,
+                "error": log.error_message,
+                "time": log.completed_at.isoformat() if log.completed_at else None,
+            }
+        )
+
+    unsynced_sales = Sale.objects.filter(
+        completed_at__isnull=False, synced_at__isnull=True
+    ).count()
+
+    unsynced_returns = Return.objects.filter(synced_at__isnull=True).count()
+
+    last_syncs = {}
+    for sync_type in [
+        "initial",
+        "pull",
+        "push_sales",
+        "push_returns",
+        "pull_sales",
+        "pull_returns",
+    ]:
+        last = (
+            SyncLog.objects.filter(sync_type=sync_type, status="success")
+            .order_by("-completed_at")
+            .first()
+        )
+
+        last_syncs[sync_type] = {
+            "time": (
+                last.completed_at.isoformat() if last and last.completed_at else None
+            ),
+            "records": last.records_count if last else 0,
+        }
+
+    # Count synced records
+    synced_products = Product.objects.filter(server_id__isnull=False).count()
+    synced_categories = Category.objects.filter(server_id__isnull=False).count()
+    synced_brands = Brand.objects.filter(server_id__isnull=False).count()
+    synced_users = User.objects.filter(server_id__isnull=False).count()
+
+    total_sales = Sale.objects.filter(completed_at__isnull=False).count()
+    synced_sales = Sale.objects.filter(synced_at__isnull=False).count()
+
+    total_returns = Return.objects.count()
+    synced_returns = Return.objects.filter(synced_at__isnull=False).count()
+
+    # Server connection test
+    try:
+        from sync.api_client import ServerAPI
+
+        api = ServerAPI()
+        server_reachable = api.test_connection()
+    except Exception as e:
+        server_reachable = False
+
+    return JsonResponse(
+        {
+            "sync_enabled": (
+                settings.ENABLE_SYNC if hasattr(settings, "ENABLE_SYNC") else False
+            ),
+            "is_desktop": (
+                settings.IS_DESKTOP if hasattr(settings, "IS_DESKTOP") else False
+            ),
+            "background_sync_running": sync_running,
+            "server_reachable": server_reachable,
+            "server_url": (
+                settings.SERVER_API_URL if hasattr(settings, "SERVER_API_URL") else None
+            ),
+            "unsynced": {"sales": unsynced_sales, "returns": unsynced_returns},
+            "synced_from_server": {
+                "products": synced_products,
+                "categories": synced_categories,
+                "brands": synced_brands,
+                "users": synced_users,
+            },
+            "sales_stats": {
+                "total": total_sales,
+                "synced": synced_sales,
+                "percentage": round(
+                    (synced_sales / total_sales * 100) if total_sales > 0 else 0, 2
+                ),
+            },
+            "returns_stats": {
+                "total": total_returns,
+                "synced": synced_returns,
+                "percentage": round(
+                    (synced_returns / total_returns * 100) if total_returns > 0 else 0,
+                    2,
+                ),
+            },
+            "last_syncs": last_syncs,
+            "recent_logs": logs_data,
+            "current_time": timezone.now().isoformat(),
+        }
+    )
+
+
+@staff_member_required
+@require_http_methods(["POST"])
+def trigger_sync(request):
+    """Manually trigger a sync"""
+    try:
+        if not sync_service:
+            return JsonResponse(
+                {"success": False, "error": "Sync service not initialized"}, status=500
+            )
+
+        result = sync_service.sync_now()
+
+        return JsonResponse(
+            {
+                "success": result,
+                "message": "Sync completed" if result else "Sync failed",
+                "timestamp": timezone.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@staff_member_required
+@require_http_methods(["GET"])
+def check_server_connection(request):
+    """Test server connection"""
+    try:
+        from sync.api_client import ServerAPI
+
+        api = ServerAPI()
+
+        reachable = api.test_connection()
+
+        return JsonResponse(
+            {
+                "reachable": reachable,
+                "server_url": (
+                    settings.SERVER_API_URL
+                    if hasattr(settings, "SERVER_API_URL")
+                    else None
+                ),
+                "timestamp": timezone.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        import traceback
+
+        return JsonResponse(
+            {"reachable": False, "error": str(e), "traceback": traceback.format_exc()},
+            status=500,
+        )
