@@ -84,6 +84,9 @@ class BackgroundSync:
 
                     self.sync_manager.pull_from_server()
 
+                    self.sync_manager.pull_sales_from_server()
+                    self.sync_manager.pull_returns_from_server()
+
                     print(f"[{timezone.now().strftime('%H:%M:%S')}] ✓ Sync completed")
                 else:
                     print(
