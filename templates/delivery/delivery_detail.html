@@ -1,0 +1,280 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delivery Details - {{ delivery.delivery_number }}{% endblock %}
+
+{% block content %}
+<style>
+    .detail-header {
+        margin-bottom: 20px;
+        padding: 0 0 20px 0;
+    }
+
+    .detail-header h1 {
+        color: #212529;
+        font-size: 32px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .detail-header p {
+        color: #6c757d;
+        font-size: 16px;
+        margin-bottom: 0;
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 15px;
+        background: #6c757d;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        transition: background-color 0.3s ease;
+    }
+
+    .back-link:hover {
+        background: #5a6268;
+        color: white;
+        text-decoration: none;
+    }
+
+    .back-link i {
+        margin-right: 8px;
+    }
+
+    .delivery-info-section {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    .delivery-info-section h3 {
+        color: #212529;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+
+    .delivery-status {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        text-transform: uppercase;
+        margin-bottom: 20px;
+    }
+
+    .status-assigned { background-color: #fff3cd; color: #856404; }
+    .status-in-transit { background-color: #d1ecf1; color: #0c5460; }
+    .status-delivered { background-color: #d4edda; color: #155724; }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .info-item label {
+        font-weight: 600;
+        color: #495057;
+        font-size: 12px;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+
+    .info-item span {
+        color: #212529;
+        font-size: 16px;
+    }
+
+    .sale-items-section {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .sale-items-section h3 {
+        color: #212529;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .items-table th,
+    .items-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .items-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #495057;
+        font-size: 12px;
+        text-transform: uppercase;
+    }
+
+    .items-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .item-total {
+        font-weight: bold;
+        color: #28a745;
+    }
+
+    .order-summary {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+
+    .order-summary h4 {
+        color: #212529;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .summary-row:last-child {
+        border-bottom: none;
+        font-weight: bold;
+        font-size: 18px;
+        color: #28a745;
+    }
+
+    .summary-row.total {
+        border-top: 2px solid #dee2e6;
+        margin-top: 10px;
+        padding-top: 15px;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="detail-header">
+        <a href="{% url 'delivery:delivery_history' %}" class="back-link">
+            <i class="bx bx-arrow-back"></i>
+            Back to History
+        </a>
+        <h1>{{ delivery.delivery_number }}</h1>
+        <p>Delivery details and sale information</p>
+    </div>
+
+    <div class="delivery-info-section">
+        <h3>Delivery Information</h3>
+
+        <span class="delivery-status status-{{ delivery.status|lower|slugify }}">
+            {{ delivery.get_status_display }}
+        </span>
+
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Sale Number</label>
+                <span>{{ delivery.sale.sale_number }}</span>
+            </div>
+
+            <div class="info-item">
+                <label>Delivery Address</label>
+                <span>{{ delivery.delivery_address }}</span>
+            </div>
+
+            <div class="info-item">
+                <label>Assigned At</label>
+                <span>{{ delivery.assigned_at|date:"M d, Y H:i" }}</span>
+            </div>
+
+            {% if delivery.delivered_at %}
+            <div class="info-item">
+                <label>Delivered At</label>
+                <span>{{ delivery.delivered_at|date:"M d, Y H:i" }}</span>
+            </div>
+            {% endif %}
+
+            <div class="info-item">
+                <label>Payment Status</label>
+                <span>{{ delivery.get_payment_status_display }}</span>
+            </div>
+
+            {% if delivery.notes %}
+            <div class="info-item" style="grid-column: span 2;">
+                <label>Notes</label>
+                <span>{{ delivery.notes }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="sale-items-section">
+        <h3>Sale Items</h3>
+
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in sale_items %}
+                <tr>
+                    <td>
+                        <div>
+                            <strong>{{ item.product.name }}</strong>
+                            {% if item.product.sku %}
+                            <br><small style="color: #6c757d;">SKU: {{ item.product.sku }}</small>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>{{ item.quantity }}</td>
+                    <td>KSh {{ item.unit_price|floatformat:2 }}</td>
+                    <td class="item-total">KSh {{ item.total_amount|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="order-summary">
+            <h4>Order Summary</h4>
+            <div class="summary-row">
+                <span>Subtotal</span>
+                <span>KSh {{ delivery.sale.total_amount|floatformat:2 }}</span>
+            </div>
+            {% if delivery.sale.discount_amount %}
+            <div class="summary-row">
+                <span>Discount</span>
+                <span>-KSh {{ delivery.sale.discount_amount|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            <div class="summary-row total">
+                <span>Total Amount</span>
+                <span>KSh {{ delivery.sale.final_amount|floatformat:2 }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

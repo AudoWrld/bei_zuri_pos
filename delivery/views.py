@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from .models import Delivery
@@ -51,3 +51,44 @@ def delivery_home(request):
     }
 
     return render(request, 'delivery/delivery_home.html', context)
+
+
+@login_required
+def delivery_history(request):
+    if not request.user.is_delivery_guy():
+        raise PermissionDenied("Access denied")
+
+    completed_deliveries = (
+        Delivery.objects.filter(
+            delivery_guy=request.user, status="delivered"
+        )
+        .select_related("sale")
+        .order_by("-delivered_at")
+    )
+
+    context = {
+        "user": request.user,
+        "completed_deliveries": completed_deliveries,
+    }
+    return render(request, "delivery/delivery_history.html", context)
+
+
+@login_required
+def delivery_detail(request, delivery_id):
+    if not request.user.is_delivery_guy():
+        raise PermissionDenied("Access denied")
+
+    delivery = get_object_or_404(
+        Delivery,
+        id=delivery_id,
+        delivery_guy=request.user
+    )
+
+    sale_items = delivery.sale.items.select_related("product").all()
+
+    context = {
+        "user": request.user,
+        "delivery": delivery,
+        "sale_items": sale_items,
+    }
+    return render(request, "delivery/delivery_detail.html", context)

@@ -1,19 +1,27 @@
-from pathlib import Path
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
 
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "django-insecure-d^55ru!+&7at$$0lhq_x4+zqw0t2yk*_1zoh9ta&rxgr_5jd(m"
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY", "django-insecure-d^55ru!+&7at$$0lhq_x4+zqw0t2yk*_1zoh9ta&rxgr_5jd(m"
+)
 
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = ["*"]
+IS_DESKTOP = os.environ.get("IS_DESKTOP", "False") == "True"
+IS_VPS = not IS_DESKTOP
 
-CSRF_TRUSTED_ORIGINS = ["https://0d8cbb2700c2.ngrok-free.app"]
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "*").split(",")
+
+CSRF_TRUSTED_ORIGINS = (
+    os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if os.environ.get("CSRF_TRUSTED_ORIGINS")
+    else []
+)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -22,6 +30,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "rest_framework",
+    "rest_framework.authtoken",
     "django_select2",
     "dashboard",
     "customers",
@@ -61,6 +71,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "bei_zuri_pos.context_processors.static_version",
             ],
         },
     },
@@ -68,51 +79,59 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "bei_zuri_pos.wsgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+if IS_DESKTOP:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
     }
-}
+
+    SERVER_API_URL = os.environ.get("SERVER_API_URL", "")
+    SERVER_API_TOKEN = os.environ.get("SERVER_API_TOKEN", "")
+    STORE_ID = os.environ.get("STORE_ID", "1")
+    SYNC_INTERVAL = int(os.environ.get("SYNC_INTERVAL", "300"))
+    ENABLE_SYNC = os.environ.get("ENABLE_SYNC", "False") == "True"
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("DB_NAME", "beizuri_pos"),
+            "USER": os.environ.get("DB_USER", "postgres"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+            "HOST": os.environ.get("DB_HOST", "localhost"),
+            "PORT": os.environ.get("DB_PORT", "5432"),
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
     },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 LANGUAGE_CODE = "en-us"
-
 TIME_ZONE = "Africa/Nairobi"
-
 USE_I18N = True
-
 USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
-]
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
 
+STATIC_VERSION = "1.0.0"
 WHITENOISE_MANIFEST_STRICT = False
 WHITENOISE_MAX_AGE = 31536000
 
@@ -124,8 +143,8 @@ AUTH_USER_MODEL = "users.User"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/users/login/"
 
-
-RECEIPT_BASE_URL = "https://0d8cbb2700c2.ngrok-free.app"
+PRINT_SERVER_URL = "http://localhost:8080"
+RECEIPT_BASE_URL = os.environ.get("RECEIPT_BASE_URL", "http://localhost:8000")
 
 LOGGING = {
     "version": 1,
@@ -140,5 +159,15 @@ LOGGING = {
         "level": "INFO",
     },
 }
+
 HASHPAY_API_KEY = os.environ.get("HASHPAY_API_KEY")
 HASHPAY_ACCOUNT_ID = os.environ.get("HASHPAY_ACCOUNT_ID")
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+}
