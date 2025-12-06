@@ -5,6 +5,7 @@ import socket
 import multiprocessing
 import sys
 import os
+from pathlib import Path
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "bei_zuri_pos.settings")
 
@@ -39,26 +40,34 @@ def start_django(port):
 
 
 def main():
-    port = get_available_port()
-
-    server_thread = threading.Thread(target=start_django, args=(port,), daemon=True)
-    server_thread.start()
-
-    for i in range(30):
-        if is_port_in_use(port):
-            break
-        time.sleep(0.1)
+    splash_path = Path(__file__).parent / "templates" / "splash.html"
 
     window = webview.create_window(
         "BeiZuri POS",
-        f"http://127.0.0.1:{port}",
-        width=1280,
+        splash_path.as_uri(),
+        width=1480,
         height=720,
-        min_size=(1280, 720),
+        min_size=(1480, 720),
         resizable=True,
         fullscreen=False,
         text_select=True,
     )
+
+    def start_app():
+        port = get_available_port()
+
+        server_thread = threading.Thread(target=start_django, args=(port,), daemon=True)
+        server_thread.start()
+
+        for i in range(30):
+            if is_port_in_use(port):
+                break
+            time.sleep(0.1)
+
+        window.load_url(f"http://127.0.0.1:{port}")
+
+    threading.Thread(target=start_app, daemon=True).start()
+
     webview.start()
 
 
