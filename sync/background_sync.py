@@ -6,7 +6,7 @@ from .sync_manager import SyncManager
 
 
 class BackgroundSync:
-    def __init__(self, interval=300):
+    def __init__(self, interval=30):
         self.interval = interval
         self.running = False
         self.thread = None
@@ -50,11 +50,8 @@ class BackgroundSync:
                         self.sync_manager.initial_setup()
                     first_run = False
 
-                print(f"[{timezone.now().strftime('%H:%M:%S')}] Starting sync...")
-
                 if self.sync_manager.api.test_connection():
                     self.sync_manager.full_sync()
-                    print(f"[{timezone.now().strftime('%H:%M:%S')}] Sync complete")
                 else:
                     print(
                         f"[{timezone.now().strftime('%H:%M:%S')}] Server unreachable, working offline"
@@ -70,6 +67,6 @@ sync_service = BackgroundSync(
     interval=(
         settings.SYNC_INTERVAL
         if hasattr(settings, "SYNC_INTERVAL") and settings.IS_DESKTOP
-        else 300
+        else 30
     )
 )
