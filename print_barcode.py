@@ -5,9 +5,7 @@ import os
 
 
 def load_printer_config():
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    config_path = os.path.join(base_dir, "printer_config.json")
-
+    config_path = os.path.join(os.path.dirname(__file__), "printer_config.json")
     if os.path.exists(config_path):
         with open(config_path, "r") as f:
             config = json.load(f)
@@ -16,7 +14,6 @@ def load_printer_config():
                 int(config["product_id"], 16),
                 int(config["out_endpoint"], 16),
             )
-
     return 0x0483, 0x5743, 0x01
 
 
@@ -111,7 +108,7 @@ def generate_barcode(barcode_data: str, barcode_type="EAN13"):
 def build_double_barcode_label(barcode_number):
     label = bytearray()
 
-    if barcode_number.startswith("0") and len(barcode_number) == 13:
+    if barcode_number.startswith('0') and len(barcode_number) == 13:
         upc_code = barcode_number[1:]
         barcode_cmd = generate_barcode(upc_code, "UPCA")
     else:
@@ -120,7 +117,7 @@ def build_double_barcode_label(barcode_number):
     label.extend(ALIGN_CENTER)
     label.extend(barcode_cmd)
     label.extend(LINE_FEED)
-
+    
     label.extend(ALIGN_CENTER)
     label.extend(barcode_cmd)
     label.extend(LINE_FEED)
@@ -140,7 +137,7 @@ def build_label_page(barcode_number, quantity):
 
     if remainder == 1:
         page.extend(ALIGN_CENTER)
-        if barcode_number.startswith("0") and len(barcode_number) == 13:
+        if barcode_number.startswith('0') and len(barcode_number) == 13:
             upc_code = barcode_number[1:]
             barcode_cmd = generate_barcode(upc_code, "UPCA")
         else:
@@ -176,9 +173,9 @@ def print_barcodes(barcode_number, quantity):
 
 
 if __name__ == "__main__":
-    print("\n" + "=" * 50)
+    print("\n" + "="*50)
     print("BARCODE LABEL PRINTER")
-    print("=" * 50)
+    print("="*50)
 
     barcode = input("\nEnter 13-digit barcode number: ").strip()
     quantity = input("Enter quantity to print: ").strip()

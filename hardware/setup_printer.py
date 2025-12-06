@@ -77,6 +77,12 @@ def test_print(vendor_id, product_id, endpoint):
             return False, "Printer not found"
 
         try:
+            if dev.is_kernel_driver_active(0):
+                dev.detach_kernel_driver(0)
+        except (AttributeError, usb.core.USBError):
+            pass
+
+        try:
             dev.set_configuration()
         except:
             pass
@@ -112,89 +118,77 @@ def save_config(vendor_id, product_id, endpoint, name):
         "out_endpoint": endpoint,
     }
 
-    config_path = os.path.join(os.path.dirname(__file__), "printer_config.json")
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    config_path = os.path.join(base_dir, "printer_config.json")
 
     with open(config_path, "w") as f:
         json.dump(config, f, indent=2)
 
-    print(f"\n[OK] Configuration saved to: {config_path}")
+    return config_path
 
 
-def main():
-    print("=" * 70)
-    print("  BEIZURI POS - Thermal Printer Setup")
-    print("=" * 70)
-
-    print("\n[1/3] Detecting thermal printer...")
+def auto_setup_printer():
     printer_info, dev = detect_thermal_printer()
 
     if printer_info:
-        print(f"\n[OK] Found: {printer_info['name']}")
-        print(f"  Vendor ID:  {hex(printer_info['vendor_id'])}")
-        print(f"  Product ID: {hex(printer_info['product_id'])}")
-
-        # Automatically use detected printer
         vendor_id = hex(printer_info["vendor_id"])
         product_id = hex(printer_info["product_id"])
         endpoint = find_printer_endpoint(dev)
         printer_name = printer_info["name"]
 
-        print(f"\n[2/3] Testing printer connection...")
         success, message = test_print(vendor_id, product_id, endpoint)
 
         if success:
-            print(f"[OK] {message}")
-            print("\n[3/3] Saving configuration...")
-            save_config(vendor_id, product_id, endpoint, printer_name)
-            print("\n" + "=" * 70)
-            print("  Setup Complete!")
-            print("=" * 70)
-            print("\nYour thermal printer is now configured.")
-            print("You can now use it with your Django POS system.")
-            return
+            config_path = save_config(vendor_id, product_id, endpoint, printer_name)
+            return (
+                True,
+                f"Printer configured: {printer_name}",
+                {
+                    "name": printer_name,
+                    "vendor_id": vendor_id,
+                    "product_id": product_id,
+                    "endpoint": endpoint,
+                    "config_path": config_path,
+                },
+            )
         else:
-            print(f"[ERROR] {message}")
-            print("\n[ERROR] Printer test failed. Setup aborted.")
-            return
+            return False, f"Printer test failed: {message}", None
 
-    # If no known printer detected, try to find any USB device that might be a printer
-    print("\n[ERROR] No known thermal printer detected.")
-    print("\nScanning for USB devices...")
     devices = find_all_usb_devices()
 
     if not devices:
-        print("[ERROR] No USB devices found!")
-        return
+        return False, "No USB devices found", None
 
-    # Try the first device as printer (assuming it's the printer)
     selected = devices[0]
-    print(f"\n[OK] Using first USB device: {selected['product']} ({selected['manufacturer']})")
-    print(f"   VID: {selected['vendor_id']}, PID: {selected['product_id']}")
-
     vendor_id = selected["vendor_id"]
     product_id = selected["product_id"]
-    endpoint = "0x01"  # Default endpoint
+    endpoint = "0x01"
     printer_name = selected["product"]
 
-    print(f"\n[2/3] Testing printer...")
     success, message = test_print(vendor_id, product_id, endpoint)
 
     if success:
-        print(f"[OK] {message}")
-        print("\n[3/3] Saving configuration...")
-        save_config(vendor_id, product_id, endpoint, printer_name)
-        print("\n" + "=" * 70)
-        print("  Setup Complete!")
-        print("=" * 70)
-        print("\nYour thermal printer is now configured.")
-        print("You can now use it with your Django POS system.")
+        config_path = save_config(vendor_id, product_id, endpoint, printer_name)
+        return (
+            True,
+            f"Printer configured: {printer_name}",
+            {
+                "name": printer_name,
+                "vendor_id": vendor_id,
+                "product_id": product_id,
+                "endpoint": endpoint,
+                "config_path": config_path,
+            },
+        )
     else:
-        print(f"[ERROR] {message}")
-        print("\n[ERROR] Setup failed. Please check your printer connection.")
+        return False, f"Setup failed: {message}", None
 
 
-if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n\nSetup cancelled.")
+def load_printer_config():
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    config_path = os.path.join(base_dir, "printer_config.json")
+
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            return json.load(f)
+    return None

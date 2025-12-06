@@ -30,57 +30,73 @@ def settings_home(request):
 @user_passes_test(can_manage_users)
 def printer_settings(request):
     import json
-    config_path = os.path.join(os.path.dirname(__file__), "../hardware/printer_config.json")
+
+    config_path = os.path.join(
+        os.path.dirname(__file__), "../hardware/printer_config.json"
+    )
     printer_configured = os.path.exists(config_path)
     printer_config = None
     if printer_configured:
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path, "r") as f:
                 printer_config = json.load(f)
         except:
             pass
-    return render(request, "settings/printer.html", {
-        "printer_configured": printer_configured,
-        "printer_config": printer_config
-    })
+    return render(
+        request,
+        "settings/printer.html",
+        {"printer_configured": printer_configured, "printer_config": printer_config},
+    )
+
+
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+import json
+import os
+
+try:
+    from .printer_setup import auto_setup_printer, load_printer_config
+except ImportError:
+    try:
+        from printer_setup import auto_setup_printer, load_printer_config
+    except ImportError:
+        auto_setup_printer = None
+        load_printer_config = None
 
 
 @login_required
-@user_passes_test(can_manage_users)
+def printer_settings(request):
+    printer_config = None
+
+    if load_printer_config:
+        printer_config = load_printer_config()
+
+    context = {
+        "printer_config": printer_config,
+    }
+    return render(request, "settings/printer.html", context)
+
+
+@login_required
+@require_POST
 def setup_printer(request):
-    if request.method == "POST":
-        try:
-            setup_script = os.path.join(os.path.dirname(__file__), "../hardware/setup_printer.py")
-            result = subprocess.run([sys.executable, setup_script],
-                                  capture_output=True, text=True, timeout=60,
-                                  creationflags=CREATE_NO_WINDOW)
+    if not auto_setup_printer:
+        return JsonResponse(
+            {"success": False, "error": "Printer setup module not available"}
+        )
 
-            if result.returncode == 0:
-                return JsonResponse({
-                    "success": True,
-                    "message": "Printer setup completed successfully!"
-                })
-            else:
-                return JsonResponse({
-                    "success": False,
-                    "error": result.stderr or "Setup failed"
-                })
+    try:
+        success, message, config = auto_setup_printer()
 
-        except subprocess.TimeoutExpired:
-            return JsonResponse({
-                "success": False,
-                "error": "Setup timed out. Please try again."
-            })
-        except Exception as e:
-            return JsonResponse({
-                "success": False,
-                "error": f"Setup failed: {str(e)}"
-            })
+        if success:
+            return JsonResponse({"success": True, "message": message, "config": config})
+        else:
+            return JsonResponse({"success": False, "error": message})
 
-    return JsonResponse({
-        "success": False,
-        "error": "Invalid request method"
-    })
+    except Exception as e:
+        return JsonResponse({"success": False, "error": f"Setup failed: {str(e)}"})
 
 
 @login_required
@@ -109,7 +125,9 @@ def create_user(request):
 def update_user(request, user_id):
     user = get_object_or_404(User, id=user_id)
     if request.method == "POST":
-        form = CustomUserChangeForm(request.POST, instance=user, current_user=request.user)
+        form = CustomUserChangeForm(
+            request.POST, instance=user, current_user=request.user
+        )
         if form.is_valid():
             form.save()
             messages.success(request, f"User {user.username} updated successfully.")
