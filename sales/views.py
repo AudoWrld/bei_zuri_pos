@@ -918,6 +918,9 @@ def sales_history(request):
 
     sales = Sale.objects.filter(completed_at__isnull=False)
 
+    if request.user.is_cashier():
+        sales = sales.filter(cashier=request.user)
+
     search_query = request.GET.get("search", "").strip()
     if search_query:
         sales = sales.filter(
@@ -982,6 +985,10 @@ def sale_detail(request, sale_id):
         raise PermissionDenied("You do not have permission to view sale details.")
 
     sale = get_object_or_404(Sale, id=sale_id, completed_at__isnull=False)
+
+    if request.user.is_cashier() and sale.cashier != request.user:
+        raise PermissionDenied("You can only view details of your own sales.")
+
     sale_items = SaleItem.objects.filter(sale=sale).select_related("product")
     context = {
         "sale": sale,
@@ -1453,6 +1460,9 @@ def returns_history(request):
 
     returns = Return.objects.select_related("sale", "cashier").prefetch_related("items")
 
+    if request.user.is_cashier():
+        returns = returns.filter(cashier=request.user)
+
     search_query = request.GET.get("search", "").strip()
     if search_query:
         returns = returns.filter(
@@ -1514,6 +1524,10 @@ def return_detail(request, return_id):
         raise PermissionDenied("You do not have permission to view return details.")
 
     return_obj = get_object_or_404(Return, id=return_id)
+
+    if request.user.is_cashier() and return_obj.cashier != request.user:
+        raise PermissionDenied("You can only view details of your own returns.")
+
     return_items = ReturnItem.objects.filter(return_fk=return_obj).select_related("sale_item__product")
     context = {
         "return_obj": return_obj,

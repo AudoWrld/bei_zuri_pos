@@ -93,6 +93,8 @@
               <span>Dashboard</span>
             </a>
           </li>
+
+          {% if user.can_process_sales %}
           <li data-tooltip="New Sale">
             <a href="{% url 'sales:new_sale' %}" {% if request.resolver_match.url_name == 'new_sale' and request.resolver_match.app_name == 'sales' %}class="active"{% endif %}>
               <i class="bx bx-file icon"></i>
@@ -111,36 +113,50 @@
               <span>Return</span>
             </a>
           </li>
+          {% endif %}
+
+          {% if user.can_manage_inventory %}
           <li data-tooltip="Inventory">
             <a href="{% url 'inventory:inventory_home' %}" {% if request.resolver_match.url_name == 'inventory_home' and request.resolver_match.app_name == 'inventory' %}class="active"{% endif %}>
               <i class="bx bx-archive icon"></i>
               <span>Inventory</span>
             </a>
           </li>
+          {% endif %}
+
+          {% if user.can_view_products %}
           <li data-tooltip="Products">
             <a href="{% url 'products:product_list' %}" {% if request.resolver_match.url_name == 'product_list' and request.resolver_match.app_name == 'products' %}class="active"{% endif %}>
               <i class="bx bx-package icon"></i>
               <span>Products</span>
             </a>
           </li>
+          {% endif %}
+
           <li data-tooltip="Customers">
             <a href="{% url 'customers:customers' %}" {% if request.resolver_match.url_name == 'customers' and request.resolver_match.app_name == 'customers' %}class="active"{% endif %}>
               <i class="bx bx-group icon"></i>
               <span>Customers</span>
             </a>
           </li>
+
+          {% if user.is_admin or user.is_supervisor %}
           <li data-tooltip="Delivery">
             <a href="{% url 'delivery:delivery_home' %}" {% if request.resolver_match.url_name == 'delivery_home' and request.resolver_match.app_name == 'delivery' %}class="active"{% endif %}>
               <i class='bx bxs-truck icon'></i>
               <span>Delivery</span>
             </a>
           </li>
+          {% endif %}
+
+          {% if user.can_manage_users %}
           <li data-tooltip="Settings">
             <a href="{% url 'settings:settings_home' %}" {% if request.resolver_match.url_name == 'settings_home' and request.resolver_match.app_name == 'settings' %}class="active"{% endif %}>
               <i class="bx bx-cog icon"></i>
               <span>Settings</span>
             </a>
           </li>
+          {% endif %}
         </ul>
       </aside>
 

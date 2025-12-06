@@ -1,6 +1,5 @@
 import usb.core
 import usb.util
-import logging
 import json
 import os
 from django.conf import settings
@@ -8,8 +7,6 @@ from django.urls import reverse
 from django.utils import timezone
 from decimal import Decimal
 import pytz
-
-logger = logging.getLogger(__name__)
 
 
 def load_printer_config():
@@ -52,27 +49,21 @@ def find_printer():
         dev = usb.core.find(idVendor=VENDOR_ID, idProduct=PRODUCT_ID)
 
         if dev is None:
-            logger.error(
-                f"Printer not found (VID: {hex(VENDOR_ID)}, PID: {hex(PRODUCT_ID)})"
-            )
             return None
 
         try:
             dev.set_configuration()
-            logger.info("Printer configured successfully")
         except usb.core.USBError as e:
-            logger.warning(f"Could not set configuration: {e}")
+            pass
 
         try:
             usb.util.claim_interface(dev, 0)
-            logger.info("Interface claimed successfully")
         except usb.core.USBError as e:
-            logger.warning(f"Could not claim interface: {e}")
+            pass
 
         return dev
 
     except Exception as e:
-        logger.error(f"Error finding printer: {e}")
         return None
 
 
@@ -83,7 +74,6 @@ def print_data(data):
             return False, "Printer not found"
 
         dev.write(OUT_ENDPOINT, data)
-        logger.info("Data sent to printer successfully")
 
         try:
             usb.util.release_interface(dev, 0)
@@ -93,11 +83,9 @@ def print_data(data):
         return True, "Print successful"
 
     except usb.core.USBError as e:
-        logger.error(f"USB Error: {e}")
         return False, f"USB Error: {str(e)}"
 
     except Exception as e:
-        logger.error(f"Print error: {e}")
         return False, f"Error: {str(e)}"
 
 
@@ -281,7 +269,7 @@ def build_receipt(receipt_data):
         receipt.extend(LINE_FEED)
         receipt.extend(b"Scan for details\n")
     except Exception as e:
-        logger.error(f"QR code generation failed: {e}")
+        pass
 
     receipt.extend(LINE_FEED)
     receipt.extend(b"Thank you for your purchase!\n")
@@ -345,14 +333,11 @@ def print_receipt(sale, timeout=5):
         success, message = print_data(receipt_bytes)
 
         if success:
-            logger.info(f"Receipt printed for sale {sale.sale_number}")
             return True, "Receipt printed successfully"
         else:
-            logger.error(f"Print failed for sale {sale.sale_number}: {message}")
             return False, message
 
     except Exception as e:
-        logger.error(f"Unexpected print error for sale {sale.sale_number}: {str(e)}")
         return False, f"Print error: {str(e)}"
 
 
@@ -371,7 +356,6 @@ def check_printer_status():
         return True, "Printer is ready"
 
     except Exception as e:
-        logger.error(f"Error checking status: {e}")
         return False, str(e)
 
 
@@ -418,5 +402,4 @@ def print_test_receipt():
             return False, message
 
     except Exception as e:
-        logger.error(f"Error printing test receipt: {e}")
         return False, str(e)

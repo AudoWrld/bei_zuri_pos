@@ -8,13 +8,11 @@ from django.db.models import Count, Q
 
 @login_required
 def delivery_home(request):
-    if not request.user.can_handle_deliveries():
-        raise PermissionDenied("You do not have permission to view deliveries.")
+    if not (request.user.is_admin() or request.user.is_supervisor()):
+        raise PermissionDenied("You do not have permission to manage deliveries.")
 
-    # Get all delivery guys
     delivery_guys = User.objects.filter(role="delivery_guy", is_active=True).order_by('first_name', 'last_name')
 
-    # Get delivery guys with their active deliveries
     delivery_guys_with_status = []
     for guy in delivery_guys:
         active_delivery = Delivery.objects.filter(
@@ -28,12 +26,10 @@ def delivery_home(request):
             'is_available': active_delivery is None
         })
 
-    # Get recent deliveries
     recent_deliveries = Delivery.objects.select_related(
         'sale', 'delivery_guy', 'responsible_cashier'
     ).order_by('-created_at')[:20]
 
-    # Get delivery statistics
     total_deliveries = Delivery.objects.count()
     pending_deliveries = Delivery.objects.filter(status='pending').count()
     assigned_deliveries = Delivery.objects.filter(status='assigned').count()
