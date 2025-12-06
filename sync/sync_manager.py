@@ -90,9 +90,7 @@ class SyncManager:
                     "is_active": user_data["is_active"],
                     "is_staff": user_data.get("is_staff", False),
                     "is_superuser": user_data.get("is_superuser", False),
-                    "password": user_data.get(
-                        "password"
-                    ), 
+
                     "synced_at": timezone.now(),
                 },
             )
